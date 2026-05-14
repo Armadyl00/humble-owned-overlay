@@ -1,119 +1,177 @@
 (function () {
   'use strict';
 
-  let processedUrl = null;
+  let ownedSet = null;
+  let mutationObserver = null;
+  let debounceTimer = null;
+  let lastUrl = location.href;
 
-  async function run() {
-    if (processedUrl === location.href) return;
+  async function init() {
+    const response = await chrome.runtime.sendMessage({ type: 'getOwnedSet' });
 
-    const games = extractBundleGames();
-    if (!games || games.length === 0) return;
+    if (!response || response.error === 'not_configured') return;
 
-    // Mark this URL as handled only once extraction succeeded — otherwise
-    // we'd permanently skip pages where the embedded JSON wasn't ready on
-    // the first pass.
-    processedUrl = location.href;
-
-    console.log('[hbo] found', games.length, 'bundle games — checking ownership');
-    document.getElementById('hbo-counter')?.remove();
-
-    let response;
-    try {
-      response = await chrome.runtime.sendMessage({
-        type: 'check',
-        games: games.map(g => ({ machineName: g.machineName, name: g.humanName })),
-      });
-    } catch (err) {
-      console.warn('[hbo] message to background failed:', err);
-      return;
-    }
-
-    if (!response) {
-      console.warn('[hbo] no response from background');
-      return;
-    }
     if (response.error) {
-      console.warn('[hbo] error:', response.error);
+      console.warn('[Humble Owned Overlay]', response.error, response.message || response.hint || '');
       return;
     }
 
-    const owned = new Set(response.ownedMachineNames || []);
-    let count = 0;
-    for (const game of games) {
-      if (!owned.has(game.machineName)) continue;
-      count++;
-      const tile = findTile(game.machineName);
-      if (tile) injectBadge(tile);
-    }
-    console.log('[hbo]', count, '/', games.length, 'owned');
-    showCounter(count, games.length);
+    ownedSet = new Set(response.owned);
+    tagPage();
+    startMutationObserver();
   }
 
-  function extractBundleGames() {
-    const script = document.getElementById('webpack-bundle-page-data');
-    if (!script?.textContent) return null;
+  // ── DOM tagging ──────────────────────────────────────────────────────────
 
-    let data;
-    try {
-      data = JSON.parse(script.textContent);
-    } catch {
-      return null;
+  function tagPage() {
+    if (!ownedSet) return;
+
+    const tiles = findGameTiles();
+    let ownedCount = 0;
+
+    for (const { titleEl, cardEl, titleText } of tiles) {
+      const norm = normalizeTitle(titleText);
+      if (ownedSet.has(norm)) {
+        ownedCount++;
+        if (!cardEl.querySelector('.hbo-badge')) {
+          const badge = document.createElement('span');
+          badge.className = 'hbo-badge';
+          badge.textContent = 'Owned';
+          cardEl.appendChild(badge);
+          // cardEl needs relative positioning for the badge to anchor correctly;
+          // force it if the element doesn't already establish a stacking context.
+          const pos = getComputedStyle(cardEl).position;
+          if (pos === 'static') cardEl.style.position = 'relative';
+        }
+      }
     }
 
-    const items = data?.bundleData?.tier_item_data;
-    if (!items) return null;
-
-    return Object.entries(items)
-      .filter(([, item]) =>
-        item.item_content_type === 'game' &&
-        item.platforms_and_oses?.game?.steam &&
-        item.human_name
-      )
-      .map(([machineName, item]) => ({ machineName, humanName: item.human_name }));
+    updateCounter(ownedCount, tiles.length);
   }
 
-  function findTile(machineName) {
-    const img = document.querySelector(
-      `img[src*="${machineName}_storefront"], img[src*="/${machineName}_"], img[src*="${machineName}.jpg"], img[src*="${machineName}.png"]`
-    );
-    if (!img) return null;
+  // ── Tile discovery ───────────────────────────────────────────────────────
+  //
+  // Approach: find candidate title elements with targeted selectors, filter
+  // out obviously-non-title text (review %, deck status, prices, tier headers),
+  // then walk up the DOM from each title to find the smallest ancestor that
+  // also contains an <img>. That ancestor is the visual game card; the badge
+  // sits in its top-left corner.
 
-    let el = img.parentElement;
-    for (let i = 0; i < 8 && el; i++) {
-      const w = el.offsetWidth;
-      if (w >= 120 && w <= 480) return el;
-      el = el.parentElement;
+  function findGameTiles() {
+    const candidates = new Set();
+
+    // h3/h4 are the typical heading levels for game tiles on bundle pages.
+    // h1/h2 are excluded — they tend to be bundle/tier headers.
+    document.querySelectorAll('h3, h4').forEach(el => candidates.add(el));
+
+    // Class-name patterns used across various Humble layouts (specific
+    // enough to avoid matching review-name / section-title / tier-name).
+    document.querySelectorAll(
+      '[class*="entity-title"], [class*="entity-name"], ' +
+      '[class*="game-name"], [class*="game-title"], ' +
+      '[class*="GameName"], [class*="GameTitle"], ' +
+      '[class*="item-title"], [class*="itemTitle"], ' +
+      '[class*="product-name"], [class*="productName"]'
+    ).forEach(el => candidates.add(el));
+
+    // Classic dd-image-box layout (older bundle pages).
+    document.querySelectorAll('.dd-image-box-caption').forEach(el => candidates.add(el));
+
+    const results = [];
+    const seen = new Set();
+
+    for (const titleEl of candidates) {
+      const text = (titleEl.textContent || '').trim();
+      if (!isLikelyGameTitle(text)) continue;
+      if (seen.has(text)) continue;
+
+      const cardEl = findCardAncestor(titleEl);
+      if (!cardEl) continue;
+
+      seen.add(text);
+      results.push({ titleEl, cardEl, titleText: text });
     }
-    return img.parentElement;
+
+    return results;
   }
 
-  function injectBadge(tile) {
-    if (tile.querySelector('.hbo-badge')) return;
-    const badge = document.createElement('span');
-    badge.className = 'hbo-badge';
-    badge.textContent = 'Owned';
-    tile.appendChild(badge);
-    if (getComputedStyle(tile).position === 'static') {
-      tile.style.position = 'relative';
+  function isLikelyGameTitle(text) {
+    if (!text || text.length < 2 || text.length > 100) return false;
+    if (/^\d+%\b/.test(text)) return false;             // "94% Positive on Steam"
+    if (/^steam deck\b/i.test(text)) return false;      // "Steam Deck Playable"
+    if (/^pay\b/i.test(text)) return false;             // "Pay at least £8.80..."
+    if (/\bitem bundle\b/i.test(text)) return false;    // "8 Item Bundle"
+    if (/^[$£€]/.test(text)) return false;              // prices
+    return true;
+  }
+
+  // Walk up from the title until we find an ancestor that contains an <img>.
+  // That's the visual game card; badge anchors there so it overlays the art.
+  function findCardAncestor(el) {
+    let current = el.parentElement;
+    for (let i = 0; i < 10 && current; i++) {
+      if (current.querySelector('img')) return current;
+      current = current.parentElement;
     }
+    return null;
   }
 
-  function showCounter(owned, total) {
-    const counter = document.createElement('div');
-    counter.id = 'hbo-counter';
-    counter.textContent =
-      owned === total
+  // ── Counter banner ───────────────────────────────────────────────────────
+
+  function updateCounter(ownedCount, total) {
+    let counter = document.getElementById('hbo-counter');
+
+    if (total === 0) {
+      counter?.remove();
+      return;
+    }
+
+    if (!counter) {
+      counter = document.createElement('div');
+      counter.id = 'hbo-counter';
+
+      const anchor = document.querySelector(
+        'h1, h2, [class*="bundle-name"], [class*="page-title"], [class*="bundle-title"]'
+      );
+      if (anchor) {
+        anchor.insertAdjacentElement('afterend', counter);
+      } else {
+        document.body.prepend(counter);
+      }
+    }
+
+    const label = ownedCount === 0
+      ? `You own 0 / ${total} games in this bundle`
+      : ownedCount === total
         ? `You own all ${total} games in this bundle`
-        : `You own ${owned} / ${total} games in this bundle`;
-    document.body.appendChild(counter);
+        : `You own ${ownedCount} / ${total} games in this bundle`;
+
+    counter.textContent = label;
   }
 
-  // Re-run when the SPA URL changes. The observer fires a lot on a busy
-  // page, but the URL-equality check above keeps the hot path cheap.
+  // ── MutationObserver (lazy tiles + SPA navigation) ───────────────────────
+
+  function startMutationObserver() {
+    if (mutationObserver) mutationObserver.disconnect();
+
+    mutationObserver = new MutationObserver(() => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(tagPage, 300);
+    });
+
+    mutationObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
+  // SPA URL change watcher (separate observer on document so it survives body replacement).
   new MutationObserver(() => {
-    if (processedUrl !== location.href) run();
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      ownedSet = null;
+      mutationObserver?.disconnect();
+      document.getElementById('hbo-counter')?.remove();
+      init();
+    }
   }).observe(document, { subtree: true, childList: true });
 
-  console.log('[hbo] content script loaded');
-  run();
+  init();
 })();

@@ -2,52 +2,61 @@
 
 A private Chrome extension that shows which games in a Humble Bundle you already own on Steam.
 
-- Floating "X / Y games owned" counter in the top-right corner of every bundle page
 - Green **OWNED** badge on each game tile you already have
+- "X / Y games owned" counter near the bundle title
 
 ## How it works
 
-On a Humble Bundle bundle page (`/games/...`), the extension:
+You set up a Steam Web API key + SteamID64 once. On the extension's options page, paste those and click **Refresh library** — the extension fetches your owned games from Steam, stores **only the game list** locally, and immediately discards the API key. Next time you want to refresh (after buying new games), you paste the key again.
 
-1. Reads Humble's own embedded `webpack-bundle-page-data` JSON for the canonical list of games in the bundle.
-2. For each game, looks up the Steam appid via Steam's `storesearch` API (cached locally so each game is only ever searched once).
-3. Reads your owned-app list from `store.steampowered.com/dynamicstore/userdata/` using your existing Steam login (your session cookies are HttpOnly — invisible to this extension).
-4. Compares appids and badges any matches.
+On any Humble Bundle page, each game tile is matched against your owned games (by normalized title) and badged.
 
-No setup, no API key, no Steam ID, no popup, no options page. Just install and open Humble Bundle.
+## Setup
+
+1. **Get a Steam Web API key** at https://steamcommunity.com/dev/apikey (domain can be `localhost`)
+2. **Get your SteamID64** at https://steamid.io
+3. **Make sure your Steam profile + Game details are set to Public** (Steam → Privacy → Game details = Public)
 
 ## Install
 
 1. Download the ZIP from this repo (Code → Download ZIP) — or `git clone`
 2. Extract to a stable folder
 3. Chrome → `chrome://extensions` → enable **Developer mode** → **Load unpacked** → pick the folder
-4. Make sure you're signed into Steam in this Chrome browser (check at https://store.steampowered.com/)
+4. Right-click the extension → **Options** → paste your Steam API key + SteamID64 → click **Refresh library**
 
-That's it. Open any Humble Bundle game bundle page to see badges and the counter.
+## Use
+
+After the initial refresh, open any Humble Bundle page — owned games get a green badge.
+
+Whenever you want to refresh (e.g. after buying new games), open the extension options, paste the key, click **Refresh library**.
 
 ## Security
 
-- **No API key, no Steam ID, no passwords stored**
-- Steam session cookies are HttpOnly — JavaScript (including this extension) cannot read them. Chrome attaches them silently to requests.
-- The only thing persisted in `chrome.storage.local` is a small cache of `{game name: Steam appid}` lookups, so the same name isn't re-searched on every page visit.
-- Host permissions: only `humblebundle.com` and `store.steampowered.com`.
+- **API key is never written to disk.** It only exists in memory long enough to call Steam, then gets wiped from the input field. Keep the key in a password manager and paste it whenever you want to refresh.
+- **SteamID64 is stored** between sessions (it's a public identifier — not sensitive).
+- Only the resolved game list is persisted in `chrome.storage.local`.
+- Host permissions: only `humblebundle.com` and `api.steampowered.com`.
 - No analytics, no third parties, no remote code.
+
+If you ever want to rotate the key, click **Revoke** at https://steamcommunity.com/dev/apikey and generate a new one.
 
 ## Files
 
 ```
-manifest.json   # MV3 manifest, minimal permissions
-content.js      # runs on bundle pages — extract, match, badge
-background.js   # service worker — Steam userdata + storesearch
-content.css     # badge + counter styling
+manifest.json       # MV3 manifest, minimal permissions
+background.js       # service worker — Steam API fetch + cache
+content.js          # runs on humblebundle.com — DOM scan + badging
+content.css         # badge + counter styling
+options.html/.js    # settings page
+lib/normalize.js    # title-normalization helper (edition suffixes, etc.)
 ```
 
 ## Versions
 
-- **v3.0.0** — major simplification: no popup, no options, no refresh, no XML feed. Just visit a bundle page.
-- **v2.1.0** — embedded bundle JSON + Steam storesearch
-- **v2.0.x** — session-based auth, toolbar popup
-- **v1.x** — Steam Web API key
+- **v3.1.0** — restored to the proven-working v1.1 architecture after a few iterations went sideways
+- **v3.0.x / v2.x** — experiments with session-based auth (never reliably worked, reverted)
+- **v1.1.0** — don't persist Steam API key, manual-only refresh
+- **v1.0.0** — initial release
 
 ## License
 

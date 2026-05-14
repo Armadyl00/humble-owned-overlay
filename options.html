@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Humble Bundle Owned Overlay — Settings</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      margin: 0;
+      padding: 32px 24px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 540px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 0 6px;
+      color: #fff;
+    }
+
+    .subtitle {
+      color: #888;
+      margin: 0 0 28px;
+      font-size: 13px;
+    }
+
+    .field {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #ccc;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #777;
+      margin: 4px 0 0;
+      line-height: 1.5;
+    }
+
+    .hint a {
+      color: #5b9bd5;
+      text-decoration: none;
+    }
+
+    .hint a:hover { text-decoration: underline; }
+
+    .hint strong { color: #ccc; }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="password"],
+    input[type="text"] {
+      flex: 1;
+      background: #16213e;
+      border: 1px solid #2a2a4a;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-size: 14px;
+      padding: 8px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus { border-color: #5b9bd5; }
+
+    .toggle-btn {
+      background: #16213e;
+      border: 1px solid #2a2a4a;
+      border-radius: 6px;
+      color: #aaa;
+      cursor: pointer;
+      font-size: 13px;
+      padding: 0 12px;
+      white-space: nowrap;
+    }
+
+    .toggle-btn:hover { color: #fff; border-color: #5b9bd5; }
+
+    .actions {
+      margin-top: 24px;
+    }
+
+    button#refresh-btn {
+      background: #1a9e1a;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 22px;
+      transition: opacity 0.15s;
+    }
+
+    button#refresh-btn:hover:not(:disabled) { opacity: 0.85; }
+    button#refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #status {
+      margin-top: 16px;
+      font-size: 13px;
+      min-height: 20px;
+      border-radius: 6px;
+      padding: 8px 12px;
+      display: none;
+    }
+
+    #status.ok {
+      display: block;
+      background: #0d3b0d;
+      color: #5de05d;
+      border: 1px solid #1a6e1a;
+    }
+
+    #status.err {
+      display: block;
+      background: #3b0d0d;
+      color: #e05d5d;
+      border: 1px solid #6e1a1a;
+    }
+
+    #status.info {
+      display: block;
+      background: #0d1f3b;
+      color: #5d9de0;
+      border: 1px solid #1a3a6e;
+    }
+
+    .cache-info {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .security-note {
+      margin-top: 28px;
+      padding: 12px 14px;
+      background: #16213e;
+      border: 1px solid #2a2a4a;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #999;
+      line-height: 1.5;
+    }
+
+    .security-note strong { color: #ccc; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Humble Bundle Owned Overlay</h1>
+    <p class="subtitle">Shows which games in a bundle you already own on Steam.</p>
+
+    <div class="field">
+      <label for="steam-id">SteamID64</label>
+      <input type="text" id="steam-id" placeholder="e.g. 76561198000000000" autocomplete="off" spellcheck="false" maxlength="20" />
+      <p class="hint">
+        17-digit number. Find yours at
+        <a href="https://steamid.io" target="_blank" rel="noopener">steamid.io</a>.
+        Saved between sessions. Your Steam profile and game details must be set to <strong>Public</strong>.
+      </p>
+    </div>
+
+    <div class="field">
+      <label for="api-key">Steam Web API Key</label>
+      <div class="input-row">
+        <input type="password" id="api-key" placeholder="Paste your Steam API key" autocomplete="off" spellcheck="false" />
+        <button class="toggle-btn" id="toggle-key" type="button">Show</button>
+      </div>
+      <p class="hint">
+        Get one at
+        <a href="https://steamcommunity.com/dev/apikey" target="_blank" rel="noopener">steamcommunity.com/dev/apikey</a>.
+        <strong>Not stored</strong> — keep it in a password manager and paste it here whenever you want to refresh your library.
+      </p>
+    </div>
+
+    <div class="actions">
+      <button id="refresh-btn" type="button">Fetch library</button>
+    </div>
+
+    <div id="status"></div>
+    <p class="cache-info" id="cache-info"></p>
+
+    <div class="security-note">
+      <strong>Security:</strong> Your API key never touches the disk. It's sent
+      once to Steam over HTTPS, the game list comes back, and the key is wiped
+      from memory and from this input field. Only the game names are saved
+      locally (in <code>chrome.storage.local</code>). No automatic refreshes —
+      click <em>Fetch library</em> whenever you buy new games.
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
