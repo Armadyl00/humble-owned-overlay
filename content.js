@@ -102,6 +102,8 @@
     if (/^pay\b/i.test(text)) return false;             // "Pay at least £8.80..."
     if (/\bitem bundle\b/i.test(text)) return false;    // "8 Item Bundle"
     if (/^[$£€]/.test(text)) return false;              // prices
+    // Section headers Humble shows on bundle pages — not games.
+    if (/^(bundle filters|bundle details|charity information|leaderboard|free with this purchase)$/i.test(text)) return false;
     return true;
   }
 
