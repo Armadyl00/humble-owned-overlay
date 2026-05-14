@@ -6,6 +6,7 @@
   let mutationObserver = null;
   let debounceTimer = null;
   let lastUrl = location.href;
+  let loggedDiagnostics = false;
 
   async function init() {
     const response = await chrome.runtime.sendMessage({ type: 'getOwnedSet' });
@@ -31,13 +32,20 @@
 
     const tiles = findGameTiles();
     let ownedCount = 0;
+    const unmatched = [];
 
-    for (const { cardEl, titleText, appid } of tiles) {
-      const isOwned =
-        (appid && ownedAppids.has(appid)) ||
-        ownedNames.has(normalizeTitle(titleText));
+    for (const tile of tiles) {
+      const { cardEl, titleText, appid } = tile;
+      const normalizedTitle = normalizeTitle(titleText);
+      const matchedByAppid = appid && ownedAppids.has(appid);
+      const matchedByName = ownedNames.has(normalizedTitle);
+      const isOwned = matchedByAppid || matchedByName;
 
-      if (!isOwned) continue;
+      if (!isOwned) {
+        unmatched.push({ titleText, normalizedTitle, appid });
+        continue;
+      }
+
       ownedCount++;
 
       if (!cardEl.querySelector('.hbo-badge')) {
@@ -51,6 +59,20 @@
     }
 
     updateCounter(ownedCount, tiles.length);
+
+    // Diagnostic: when nothing matches but tiles were found, log details so
+    // the user can inspect the page DevTools console and tell us what's there.
+    // Runs only on first pass per page to avoid spam.
+    if (!loggedDiagnostics && tiles.length > 0 && ownedCount === 0) {
+      loggedDiagnostics = true;
+      console.group('[Humble Owned Overlay] No matches — diagnostics');
+      console.log(`Owned: ${ownedAppids.size} appids, ${ownedNames.size} names`);
+      console.log('Sample owned appids:', [...ownedAppids].slice(0, 5));
+      console.log('Sample owned names:', [...ownedNames].slice(0, 5));
+      console.log(`Found ${tiles.length} tiles on page`);
+      console.table(unmatched.slice(0, 15));
+      console.groupEnd();
+    }
   }
 
   // ── Tile discovery ───────────────────────────────────────────────────────
@@ -76,19 +98,26 @@
     document.querySelectorAll('.dd-image-box-caption').forEach(el => candidates.add(el));
 
     const results = [];
-    const seen = new Set();
+    const seenAppids = new Set();
+    const seenTitles = new Set();
 
     for (const titleEl of candidates) {
       const text = (titleEl.textContent || '').trim();
       if (!isLikelyGameTitle(text)) continue;
-      if (seen.has(text)) continue;
 
       const cardEl = findCardAncestor(titleEl);
       if (!cardEl) continue;
 
       const appid = getAppIdFromCard(cardEl);
 
-      seen.add(text);
+      // Dedup: if we've already seen this appid OR this title, skip. Humble
+      // renders hidden tile clones per bundle-filter (8/6/3 items), so the
+      // same game shows up multiple times in the DOM.
+      if (appid && seenAppids.has(appid)) continue;
+      if (seenTitles.has(text)) continue;
+
+      if (appid) seenAppids.add(appid);
+      seenTitles.add(text);
       results.push({ titleEl, cardEl, titleText: text, appid });
     }
 
@@ -114,16 +143,25 @@
     return null;
   }
 
-  // Pull the Steam appid out of any store.steampowered.com link inside the card.
-  // Humble tiles for Steam keys typically include such a link (often the
-  // "Steam Deck Verified" / "% Positive on Steam" link points there).
+  // Pull the Steam appid out of any Steam link inside the card.
+  // "% Positive on Steam" links typically go to steamcommunity.com/app/<id>/reviews/;
+  // "Steam Deck Verified/Playable" links go to store.steampowered.com or Steam
+  // Deck status pages — both include /app/<id>/ in the URL. We also accept
+  // Humble redirect URLs that embed the Steam appid as a query parameter.
   function getAppIdFromCard(cardEl) {
-    const link = cardEl.querySelector(
-      'a[href*="store.steampowered.com/app/"], a[href*="//steampowered.com/app/"]'
+    const links = cardEl.querySelectorAll(
+      'a[href*="steampowered.com/app/"], ' +
+      'a[href*="steamcommunity.com/app/"], ' +
+      'a[href*="/app/"]'
     );
-    if (!link) return null;
-    const match = link.href.match(/\/app\/(\d+)/);
-    return match ? parseInt(match[1], 10) : null;
+    for (const link of links) {
+      const href = link.href || '';
+      // Skip generic /app/ URLs that aren't pointed at Steam at all.
+      if (!/steam(powered|community)\.com/.test(href)) continue;
+      const match = href.match(/\/app\/(\d+)/);
+      if (match) return parseInt(match[1], 10);
+    }
+    return null;
   }
 
   // ── Counter banner ───────────────────────────────────────────────────────
@@ -176,6 +214,7 @@
       lastUrl = location.href;
       ownedAppids = null;
       ownedNames = null;
+      loggedDiagnostics = false;
       mutationObserver?.disconnect();
       document.getElementById('hbo-counter')?.remove();
       init();
