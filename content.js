@@ -5,21 +5,35 @@
 
   async function run() {
     if (processedUrl === location.href) return;
-    processedUrl = location.href;
-
-    document.getElementById('hbo-counter')?.remove();
 
     const games = extractBundleGames();
     if (!games || games.length === 0) return;
 
-    const response = await chrome.runtime.sendMessage({
-      type: 'check',
-      games: games.map(g => ({ machineName: g.machineName, name: g.humanName })),
-    });
+    // Mark this URL as handled only once extraction succeeded — otherwise
+    // we'd permanently skip pages where the embedded JSON wasn't ready on
+    // the first pass.
+    processedUrl = location.href;
 
-    if (!response) return;
+    console.log('[hbo] found', games.length, 'bundle games — checking ownership');
+    document.getElementById('hbo-counter')?.remove();
+
+    let response;
+    try {
+      response = await chrome.runtime.sendMessage({
+        type: 'check',
+        games: games.map(g => ({ machineName: g.machineName, name: g.humanName })),
+      });
+    } catch (err) {
+      console.warn('[hbo] message to background failed:', err);
+      return;
+    }
+
+    if (!response) {
+      console.warn('[hbo] no response from background');
+      return;
+    }
     if (response.error) {
-      console.warn('[Humble Owned Overlay]', response.error);
+      console.warn('[hbo] error:', response.error);
       return;
     }
 
@@ -31,6 +45,7 @@
       const tile = findTile(game.machineName);
       if (tile) injectBadge(tile);
     }
+    console.log('[hbo]', count, '/', games.length, 'owned');
     showCounter(count, games.length);
   }
 
@@ -57,8 +72,6 @@
       .map(([machineName, item]) => ({ machineName, humanName: item.human_name }));
   }
 
-  // Humble's tile images are named like `<machineName>_storefront.jpg`. Find
-  // the image, then climb to the smallest sensibly-sized card ancestor.
   function findTile(machineName) {
     const img = document.querySelector(
       `img[src*="${machineName}_storefront"], img[src*="/${machineName}_"], img[src*="${machineName}.jpg"], img[src*="${machineName}.png"]`
@@ -95,10 +108,12 @@
     document.body.appendChild(counter);
   }
 
-  // Re-run when the user navigates between bundles in the SPA.
+  // Re-run when the SPA URL changes. The observer fires a lot on a busy
+  // page, but the URL-equality check above keeps the hot path cheap.
   new MutationObserver(() => {
     if (processedUrl !== location.href) run();
   }).observe(document, { subtree: true, childList: true });
 
+  console.log('[hbo] content script loaded');
   run();
 })();
