@@ -50,58 +50,70 @@
   }
 
   // ── Tile discovery ───────────────────────────────────────────────────────
+  //
+  // Approach: find candidate title elements with targeted selectors, filter
+  // out obviously-non-title text (review %, deck status, prices, tier headers),
+  // then walk up the DOM from each title to find the smallest ancestor that
+  // also contains an <img>. That ancestor is the visual game card; the badge
+  // sits in its top-left corner.
 
   function findGameTiles() {
-    // Strategy 1: data-machine-name tiles (most reliable — Humble uses machine
-    // names as stable identifiers for products across the SPA).
-    const byMachineName = collectTiles('[data-machine-name]', el => {
-      // Look for a child element that is likely the title text.
-      return (
-        el.querySelector('p, h4, h3, [class*="name"], [class*="title"]') || el
-      );
-    });
-    if (byMachineName.length > 0) return byMachineName;
+    const candidates = new Set();
 
-    // Strategy 2: classic dd-image-box layout (still used on some pages).
-    const byCaption = collectTiles('.dd-image-box-caption', el => el, el =>
-      el.closest('.dd-image-box, .dd-image-box-plain') || el
-    );
-    if (byCaption.length > 0) return byCaption;
+    // h3/h4 are the typical heading levels for game tiles on bundle pages.
+    // h1/h2 are excluded — they tend to be bundle/tier headers.
+    document.querySelectorAll('h3, h4').forEach(el => candidates.add(el));
 
-    // Strategy 3: class-name substring matches for newer React layouts.
-    const classPatterns = [
-      '[class*="game-name"]',
-      '[class*="gameName"]',
-      '[class*="item-title"]',
-      '[class*="itemTitle"]',
-      '[class*="product-name"]',
-      '[class*="productName"]',
-    ];
-    for (const sel of classPatterns) {
-      const tiles = collectTiles(sel, el => el, el =>
-        el.closest('[class*="tile"], [class*="card"], [class*="item"], [class*="product"]') || el
-      );
-      if (tiles.length > 0) return tiles;
-    }
+    // Class-name patterns used across various Humble layouts (specific
+    // enough to avoid matching review-name / section-title / tier-name).
+    document.querySelectorAll(
+      '[class*="entity-title"], [class*="entity-name"], ' +
+      '[class*="game-name"], [class*="game-title"], ' +
+      '[class*="GameName"], [class*="GameTitle"], ' +
+      '[class*="item-title"], [class*="itemTitle"], ' +
+      '[class*="product-name"], [class*="productName"]'
+    ).forEach(el => candidates.add(el));
 
-    return [];
-  }
+    // Classic dd-image-box layout (older bundle pages).
+    document.querySelectorAll('.dd-image-box-caption').forEach(el => candidates.add(el));
 
-  function collectTiles(containerSel, getTitleEl, getCardEl) {
     const results = [];
-    const seenTexts = new Set();
+    const seen = new Set();
 
-    for (const el of document.querySelectorAll(containerSel)) {
-      const titleEl = getTitleEl ? getTitleEl(el) : el;
-      const cardEl = getCardEl ? getCardEl(el) : el;
-      const text = titleEl?.textContent?.trim();
+    for (const titleEl of candidates) {
+      const text = (titleEl.textContent || '').trim();
+      if (!isLikelyGameTitle(text)) continue;
+      if (seen.has(text)) continue;
 
-      if (!text || text.length < 2 || seenTexts.has(text)) continue;
-      seenTexts.add(text);
-      results.push({ titleEl, cardEl: cardEl || el, titleText: text });
+      const cardEl = findCardAncestor(titleEl);
+      if (!cardEl) continue;
+
+      seen.add(text);
+      results.push({ titleEl, cardEl, titleText: text });
     }
 
     return results;
+  }
+
+  function isLikelyGameTitle(text) {
+    if (!text || text.length < 2 || text.length > 100) return false;
+    if (/^\d+%\b/.test(text)) return false;             // "94% Positive on Steam"
+    if (/^steam deck\b/i.test(text)) return false;      // "Steam Deck Playable"
+    if (/^pay\b/i.test(text)) return false;             // "Pay at least £8.80..."
+    if (/\bitem bundle\b/i.test(text)) return false;    // "8 Item Bundle"
+    if (/^[$£€]/.test(text)) return false;              // prices
+    return true;
+  }
+
+  // Walk up from the title until we find an ancestor that contains an <img>.
+  // That's the visual game card; badge anchors there so it overlays the art.
+  function findCardAncestor(el) {
+    let current = el.parentElement;
+    for (let i = 0; i < 10 && current; i++) {
+      if (current.querySelector('img')) return current;
+      current = current.parentElement;
+    }
+    return null;
   }
 
   // ── Counter banner ───────────────────────────────────────────────────────
