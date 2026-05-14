@@ -1,12 +1,11 @@
 {
   "manifest_version": 3,
   "name": "Humble Bundle Owned Overlay",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "description": "Shows which games in a Humble Bundle you already own on Steam.",
   "permissions": ["storage"],
   "host_permissions": [
     "https://www.humblebundle.com/*",
-    "https://steamcommunity.com/*",
     "https://store.steampowered.com/*"
   ],
   "background": {
@@ -14,18 +13,10 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.humblebundle.com/*"],
-      "js": ["lib/normalize.js", "content.js"],
+      "matches": ["https://www.humblebundle.com/games/*"],
+      "js": ["content.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
     }
-  ],
-  "action": {
-    "default_popup": "popup.html",
-    "default_title": "Humble Bundle Owned Overlay"
-  },
-  "options_ui": {
-    "page": "options.html",
-    "open_in_tab": true
-  }
+  ]
 }
