@@ -37,13 +37,21 @@ refreshBtn.addEventListener('click', async () => {
 
   if (response.error === 'parse_failed') {
     showStatus(
-      `Could not parse your Steam games page (Steam may have changed its layout).`,
+      `Could not parse Steam's response. ${response.message || ''}`,
       'err'
     );
     return;
   }
 
-  if (response.error === 'empty') {
+  if (response.error === 'private_profile') {
+    showStatus(
+      `Steam reported: "${response.message}". Set your profile + Game details to Public, or rely on appid matching only.`,
+      'err'
+    );
+    return;
+  }
+
+  if (response.error === 'empty' || response.error === 'empty_xml') {
     showStatus(`Steam returned no games. ${response.hint || ''}`, 'err');
     return;
   }

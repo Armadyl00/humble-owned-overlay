@@ -34,11 +34,16 @@ refreshBtn.addEventListener('click', async () => {
   }
 
   if (response.error === 'parse_failed') {
-    showStatus('Could not parse Steam page. Steam may have changed.', 'err');
+    showStatus(`Could not parse Steam response. ${response.message || ''}`, 'err');
     return;
   }
 
-  if (response.error === 'empty') {
+  if (response.error === 'private_profile') {
+    showStatus(`Private profile. ${response.message || ''}`, 'err');
+    return;
+  }
+
+  if (response.error === 'empty' || response.error === 'empty_xml') {
     showStatus(`No games returned. ${response.hint || ''}`, 'err');
     return;
   }
