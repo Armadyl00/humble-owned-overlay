@@ -3,30 +3,32 @@
 const apiKeyInput = document.getElementById('api-key');
 const steamIdInput = document.getElementById('steam-id');
 const toggleKeyBtn = document.getElementById('toggle-key');
-const saveBtn = document.getElementById('save-btn');
 const refreshBtn = document.getElementById('refresh-btn');
 const statusEl = document.getElementById('status');
 const cacheInfoEl = document.getElementById('cache-info');
 
-// ── Load saved values ────────────────────────────────────────────────────────
-
-chrome.storage.local.get(['steamApiKey', 'steamId', 'ownedGamesCache'], result => {
-  if (result.steamApiKey) apiKeyInput.value = result.steamApiKey;
+// ── Init ────────────────────────────────────────────────────────────────────
+// Load saved Steam ID + cache info. The API key field is intentionally NOT
+// pre-populated — we don't store it anywhere.
+chrome.storage.local.get(['steamId', 'ownedGamesCache', 'steamApiKey'], async result => {
   if (result.steamId) steamIdInput.value = result.steamId;
   updateCacheInfo(result.ownedGamesCache);
+
+  // Migration: scrub any legacy API key left over from v1.0.0.
+  if (result.steamApiKey) {
+    await chrome.storage.local.remove('steamApiKey');
+  }
 });
 
 // ── Show/hide API key ────────────────────────────────────────────────────────
-
 toggleKeyBtn.addEventListener('click', () => {
   const isPassword = apiKeyInput.type === 'password';
   apiKeyInput.type = isPassword ? 'text' : 'password';
   toggleKeyBtn.textContent = isPassword ? 'Hide' : 'Show';
 });
 
-// ── Save ─────────────────────────────────────────────────────────────────────
-
-saveBtn.addEventListener('click', async () => {
+// ── Fetch library ────────────────────────────────────────────────────────────
+refreshBtn.addEventListener('click', async () => {
   const apiKey = apiKeyInput.value.trim();
   const steamId = steamIdInput.value.trim();
 
@@ -40,26 +42,33 @@ saveBtn.addEventListener('click', async () => {
     return;
   }
 
-  await chrome.storage.local.set({ steamApiKey: apiKey, steamId });
-  showStatus('Saved.', 'ok');
-});
-
-// ── Refresh library ───────────────────────────────────────────────────────────
-
-refreshBtn.addEventListener('click', async () => {
   showStatus('Fetching your Steam library…', 'info');
   refreshBtn.disabled = true;
 
-  const response = await chrome.runtime.sendMessage({ type: 'refreshNow' });
-  refreshBtn.disabled = false;
+  // Persist the Steam ID (it's a public identifier — fine to store).
+  await chrome.storage.local.set({ steamId });
+
+  let response;
+  try {
+    response = await chrome.runtime.sendMessage({
+      type: 'refreshNow',
+      apiKey,
+      steamId,
+    });
+  } finally {
+    // Always clear the API key from the input — defense in depth, regardless
+    // of whether the fetch succeeded or failed.
+    apiKeyInput.value = '';
+    refreshBtn.disabled = false;
+  }
 
   if (!response) {
-    showStatus('No response from background. Try reloading the extension.', 'err');
+    showStatus('No response from the background worker. Try reloading the extension.', 'err');
     return;
   }
 
-  if (response.error === 'not_configured') {
-    showStatus('Save your API key and SteamID64 first.', 'err');
+  if (response.error === 'missing_params') {
+    showStatus('Missing API key or Steam ID.', 'err');
     return;
   }
 
@@ -77,14 +86,13 @@ refreshBtn.addEventListener('click', async () => {
   }
 
   const count = response.owned?.length ?? 0;
-  showStatus(`Library refreshed — ${count} games loaded.`, 'ok');
+  showStatus(`Library refreshed — ${count} games loaded. API key was not stored.`, 'ok');
 
   const cacheResult = await chrome.storage.local.get('ownedGamesCache');
   updateCacheInfo(cacheResult.ownedGamesCache);
 });
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
+// ── Helpers ──────────────────────────────────────────────────────────────────
 function showStatus(message, type) {
   statusEl.textContent = message;
   statusEl.className = type;
@@ -95,7 +103,18 @@ function updateCacheInfo(cache) {
     cacheInfoEl.textContent = 'Library not yet loaded.';
     return;
   }
-  const age = Math.round((Date.now() - cache.fetchedAt) / 60000);
+
+  const ageMs = Date.now() - cache.fetchedAt;
+  const ageMin = Math.floor(ageMs / 60000);
+  const ageHr = Math.floor(ageMs / 3600000);
+  const ageDay = Math.floor(ageMs / 86400000);
+
+  let when;
+  if (ageMin < 1) when = 'just now';
+  else if (ageMin < 60) when = `${ageMin} min ago`;
+  else if (ageHr < 24) when = `${ageHr} hour${ageHr === 1 ? '' : 's'} ago`;
+  else when = `${ageDay} day${ageDay === 1 ? '' : 's'} ago`;
+
   const count = cache.games?.length ?? 0;
-  cacheInfoEl.textContent = `Cache: ${count} games · fetched ${age < 1 ? 'just now' : `${age} min ago`} · auto-refreshes after 1 hour`;
+  cacheInfoEl.textContent = `Cache: ${count} games · last refreshed ${when}`;
 }

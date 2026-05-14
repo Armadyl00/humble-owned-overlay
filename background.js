@@ -1,7 +1,11 @@
 importScripts('lib/normalize.js');
 
 const CACHE_KEY = 'ownedGamesCache';
-const CACHE_TTL_MS = 60 * 60 * 1000;
+
+// Scrub any legacy API key on install/update (v1.0.0 used to persist it).
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.storage.local.remove('steamApiKey').catch(() => {});
+});
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) return;
@@ -12,36 +16,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'refreshNow') {
-    refreshCache().then(sendResponse);
+    refreshFromKey(message.apiKey, message.steamId).then(sendResponse);
     return true;
   }
 });
 
 async function getOwnedSet() {
-  const cached = await loadFromCache();
-  if (cached) return cached;
-  return refreshCache();
-}
-
-async function loadFromCache() {
   const result = await chrome.storage.local.get(CACHE_KEY);
   const cache = result[CACHE_KEY];
-  if (!cache) return null;
-  if (Date.now() - cache.fetchedAt > CACHE_TTL_MS) return null;
+  if (!cache?.games) return { error: 'not_configured' };
   return buildResult(cache.games, cache.fetchedAt);
 }
 
-async function refreshCache() {
-  const stored = await chrome.storage.local.get(['steamApiKey', 'steamId']);
-  const { steamApiKey, steamId } = stored;
-
-  if (!steamApiKey || !steamId) {
-    return { error: 'not_configured' };
+async function refreshFromKey(apiKey, steamId) {
+  if (!apiKey || !steamId) {
+    return { error: 'missing_params' };
   }
 
   const url =
     `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/` +
-    `?key=${steamApiKey}&steamid=${steamId}&include_appinfo=1&format=json`;
+    `?key=${apiKey}&steamid=${steamId}&include_appinfo=1&format=json`;
 
   let data;
   try {
@@ -58,6 +52,8 @@ async function refreshCache() {
     return { error: 'empty', hint: 'Steam profile game details may not be set to Public' };
   }
 
+  // Persist only the game list — never the API key. The key only lives in this
+  // function's local scope and is discarded as soon as this returns.
   await chrome.storage.local.set({
     [CACHE_KEY]: { fetchedAt: Date.now(), games }
   });

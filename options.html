@@ -18,7 +18,7 @@
     }
 
     .container {
-      max-width: 520px;
+      max-width: 540px;
       margin: 0 auto;
     }
 
@@ -31,7 +31,7 @@
 
     .subtitle {
       color: #888;
-      margin: 0 0 32px;
+      margin: 0 0 28px;
       font-size: 13px;
     }
 
@@ -50,6 +50,7 @@
       font-size: 12px;
       color: #777;
       margin: 4px 0 0;
+      line-height: 1.5;
     }
 
     .hint a {
@@ -58,6 +59,8 @@
     }
 
     .hint a:hover { text-decoration: underline; }
+
+    .hint strong { color: #ccc; }
 
     .input-row {
       display: flex;
@@ -93,32 +96,23 @@
     .toggle-btn:hover { color: #fff; border-color: #5b9bd5; }
 
     .actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 28px;
+      margin-top: 24px;
     }
 
-    button {
+    button#refresh-btn {
+      background: #1a9e1a;
+      color: #fff;
       border: none;
       border-radius: 6px;
       cursor: pointer;
       font-size: 14px;
       font-weight: 600;
-      padding: 9px 20px;
+      padding: 10px 22px;
       transition: opacity 0.15s;
     }
 
-    button:hover { opacity: 0.85; }
-
-    #save-btn {
-      background: #1a9e1a;
-      color: #fff;
-    }
-
-    #refresh-btn {
-      background: #2a2a4a;
-      color: #ccc;
-    }
+    button#refresh-btn:hover:not(:disabled) { opacity: 0.85; }
+    button#refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     #status {
       margin-top: 16px;
@@ -151,16 +145,39 @@
     }
 
     .cache-info {
-      margin-top: 24px;
+      margin-top: 20px;
       font-size: 12px;
-      color: #555;
+      color: #666;
     }
+
+    .security-note {
+      margin-top: 28px;
+      padding: 12px 14px;
+      background: #16213e;
+      border: 1px solid #2a2a4a;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #999;
+      line-height: 1.5;
+    }
+
+    .security-note strong { color: #ccc; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Humble Bundle Owned Overlay</h1>
     <p class="subtitle">Shows which games in a bundle you already own on Steam.</p>
+
+    <div class="field">
+      <label for="steam-id">SteamID64</label>
+      <input type="text" id="steam-id" placeholder="e.g. 76561198000000000" autocomplete="off" spellcheck="false" maxlength="20" />
+      <p class="hint">
+        17-digit number. Find yours at
+        <a href="https://steamid.io" target="_blank" rel="noopener">steamid.io</a>.
+        Saved between sessions. Your Steam profile and game details must be set to <strong>Public</strong>.
+      </p>
+    </div>
 
     <div class="field">
       <label for="api-key">Steam Web API Key</label>
@@ -170,28 +187,25 @@
       </div>
       <p class="hint">
         Get one at
-        <a href="https://steamcommunity.com/dev/apikey" target="_blank" rel="noopener">steamcommunity.com/dev/apikey</a>
-        — stored locally, never leaves your device.
-      </p>
-    </div>
-
-    <div class="field">
-      <label for="steam-id">SteamID64</label>
-      <input type="text" id="steam-id" placeholder="e.g. 76561198000000000" autocomplete="off" spellcheck="false" maxlength="20" />
-      <p class="hint">
-        17-digit number. Find yours at
-        <a href="https://steamid.io" target="_blank" rel="noopener">steamid.io</a>.
-        Your Steam profile and game details must be set to <strong>Public</strong>.
+        <a href="https://steamcommunity.com/dev/apikey" target="_blank" rel="noopener">steamcommunity.com/dev/apikey</a>.
+        <strong>Not stored</strong> — keep it in a password manager and paste it here whenever you want to refresh your library.
       </p>
     </div>
 
     <div class="actions">
-      <button id="save-btn" type="button">Save</button>
-      <button id="refresh-btn" type="button">Refresh library now</button>
+      <button id="refresh-btn" type="button">Fetch library</button>
     </div>
 
     <div id="status"></div>
     <p class="cache-info" id="cache-info"></p>
+
+    <div class="security-note">
+      <strong>Security:</strong> Your API key never touches the disk. It's sent
+      once to Steam over HTTPS, the game list comes back, and the key is wiped
+      from memory and from this input field. Only the game names are saved
+      locally (in <code>chrome.storage.local</code>). No automatic refreshes —
+      click <em>Fetch library</em> whenever you buy new games.
+    </div>
   </div>
 
   <script src="options.js"></script>
