@@ -1,13 +1,14 @@
 'use strict';
 
+const statsEl = document.getElementById('stats');
 const refreshBtn = document.getElementById('refresh-btn');
-const cacheInfoEl = document.getElementById('cache-info');
 const statusEl = document.getElementById('status');
+const settingsLink = document.getElementById('settings-link');
 
-loadCacheInfo();
+loadStats();
 
 refreshBtn.addEventListener('click', async () => {
-  showStatus('Fetching your Steam library…', 'info');
+  showStatus('Fetching from Steam…', 'info');
   refreshBtn.disabled = true;
 
   let response;
@@ -18,15 +19,12 @@ refreshBtn.addEventListener('click', async () => {
   }
 
   if (!response) {
-    showStatus('No response from the background worker. Try reloading the extension.', 'err');
+    showStatus('No response. Try reloading the extension.', 'err');
     return;
   }
 
   if (response.error === 'not_logged_in') {
-    showStatus(
-      'You are not signed in to Steam in this browser. Sign in at store.steampowered.com and try again.',
-      'err'
-    );
+    showStatus('Not signed in to Steam. Open store.steampowered.com, sign in, then try again.', 'err');
     return;
   }
 
@@ -36,33 +34,34 @@ refreshBtn.addEventListener('click', async () => {
   }
 
   if (response.error === 'parse_failed') {
-    showStatus(
-      `Could not parse your Steam games page (Steam may have changed its layout).`,
-      'err'
-    );
+    showStatus('Could not parse Steam page. Steam may have changed.', 'err');
     return;
   }
 
   if (response.error === 'empty') {
-    showStatus(`Steam returned no games. ${response.hint || ''}`, 'err');
+    showStatus(`No games returned. ${response.hint || ''}`, 'err');
     return;
   }
 
-  showStatus(`Loaded ${response.count} games from Steam.`, 'ok');
-  loadCacheInfo();
+  showStatus(`Loaded ${response.count} games.`, 'ok');
+  loadStats();
 });
 
-async function loadCacheInfo() {
+settingsLink.addEventListener('click', () => {
+  chrome.runtime.openOptionsPage();
+});
+
+async function loadStats() {
   const { ownedGamesCache } = await chrome.storage.local.get('ownedGamesCache');
 
   if (!ownedGamesCache?.fetchedAt) {
-    cacheInfoEl.innerHTML = 'No library loaded yet — click <strong>Refresh from Steam</strong> below.';
+    statsEl.innerHTML = 'No library loaded yet.<br/>Click below to fetch.';
     return;
   }
 
   const count = ownedGamesCache.games?.length ?? 0;
   const when = formatAge(Date.now() - ownedGamesCache.fetchedAt);
-  cacheInfoEl.innerHTML = `<strong>${count} games</strong> cached · last refreshed ${when}`;
+  statsEl.innerHTML = `<strong>${count} games</strong> cached<br/>Last refreshed ${when}`;
 }
 
 function showStatus(message, type) {

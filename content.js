@@ -1,7 +1,8 @@
 (function () {
   'use strict';
 
-  let ownedSet = null;
+  let ownedAppids = null;   // Set<number>
+  let ownedNames = null;    // Set<string> (normalized)
   let mutationObserver = null;
   let debounceTimer = null;
   let lastUrl = location.href;
@@ -9,14 +10,16 @@
   async function init() {
     const response = await chrome.runtime.sendMessage({ type: 'getOwnedSet' });
 
-    if (!response || response.error === 'not_configured') return;
+    if (!response) return;
+    if (response.error === 'not_loaded') return;
 
     if (response.error) {
       console.warn('[Humble Owned Overlay]', response.error, response.message || response.hint || '');
       return;
     }
 
-    ownedSet = new Set(response.owned);
+    ownedAppids = new Set(response.ownedAppids);
+    ownedNames = new Set(response.ownedNames);
     tagPage();
     startMutationObserver();
   }
@@ -24,25 +27,26 @@
   // ── DOM tagging ──────────────────────────────────────────────────────────
 
   function tagPage() {
-    if (!ownedSet) return;
+    if (!ownedAppids && !ownedNames) return;
 
     const tiles = findGameTiles();
     let ownedCount = 0;
 
-    for (const { titleEl, cardEl, titleText } of tiles) {
-      const norm = normalizeTitle(titleText);
-      if (ownedSet.has(norm)) {
-        ownedCount++;
-        if (!cardEl.querySelector('.hbo-badge')) {
-          const badge = document.createElement('span');
-          badge.className = 'hbo-badge';
-          badge.textContent = 'Owned';
-          cardEl.appendChild(badge);
-          // cardEl needs relative positioning for the badge to anchor correctly;
-          // force it if the element doesn't already establish a stacking context.
-          const pos = getComputedStyle(cardEl).position;
-          if (pos === 'static') cardEl.style.position = 'relative';
-        }
+    for (const { cardEl, titleText, appid } of tiles) {
+      const isOwned =
+        (appid && ownedAppids.has(appid)) ||
+        ownedNames.has(normalizeTitle(titleText));
+
+      if (!isOwned) continue;
+      ownedCount++;
+
+      if (!cardEl.querySelector('.hbo-badge')) {
+        const badge = document.createElement('span');
+        badge.className = 'hbo-badge';
+        badge.textContent = 'Owned';
+        cardEl.appendChild(badge);
+        const pos = getComputedStyle(cardEl).position;
+        if (pos === 'static') cardEl.style.position = 'relative';
       }
     }
 
@@ -51,21 +55,16 @@
 
   // ── Tile discovery ───────────────────────────────────────────────────────
   //
-  // Approach: find candidate title elements with targeted selectors, filter
-  // out obviously-non-title text (review %, deck status, prices, tier headers),
-  // then walk up the DOM from each title to find the smallest ancestor that
-  // also contains an <img>. That ancestor is the visual game card; the badge
-  // sits in its top-left corner.
+  // Find candidate title elements with targeted selectors, filter out obvious
+  // non-titles (review %, deck status, prices, tier headers), then walk up to
+  // the smallest ancestor that contains an <img> — that's the visual card.
+  // Within each card, look for a Steam store link to extract the appid.
 
   function findGameTiles() {
     const candidates = new Set();
 
-    // h3/h4 are the typical heading levels for game tiles on bundle pages.
-    // h1/h2 are excluded — they tend to be bundle/tier headers.
     document.querySelectorAll('h3, h4').forEach(el => candidates.add(el));
 
-    // Class-name patterns used across various Humble layouts (specific
-    // enough to avoid matching review-name / section-title / tier-name).
     document.querySelectorAll(
       '[class*="entity-title"], [class*="entity-name"], ' +
       '[class*="game-name"], [class*="game-title"], ' +
@@ -74,7 +73,6 @@
       '[class*="product-name"], [class*="productName"]'
     ).forEach(el => candidates.add(el));
 
-    // Classic dd-image-box layout (older bundle pages).
     document.querySelectorAll('.dd-image-box-caption').forEach(el => candidates.add(el));
 
     const results = [];
@@ -88,8 +86,10 @@
       const cardEl = findCardAncestor(titleEl);
       if (!cardEl) continue;
 
+      const appid = getAppIdFromCard(cardEl);
+
       seen.add(text);
-      results.push({ titleEl, cardEl, titleText: text });
+      results.push({ titleEl, cardEl, titleText: text, appid });
     }
 
     return results;
@@ -97,16 +97,14 @@
 
   function isLikelyGameTitle(text) {
     if (!text || text.length < 2 || text.length > 100) return false;
-    if (/^\d+%\b/.test(text)) return false;             // "94% Positive on Steam"
-    if (/^steam deck\b/i.test(text)) return false;      // "Steam Deck Playable"
-    if (/^pay\b/i.test(text)) return false;             // "Pay at least £8.80..."
-    if (/\bitem bundle\b/i.test(text)) return false;    // "8 Item Bundle"
-    if (/^[$£€]/.test(text)) return false;              // prices
+    if (/^\d+%\b/.test(text)) return false;
+    if (/^steam deck\b/i.test(text)) return false;
+    if (/^pay\b/i.test(text)) return false;
+    if (/\bitem bundle\b/i.test(text)) return false;
+    if (/^[$£€]/.test(text)) return false;
     return true;
   }
 
-  // Walk up from the title until we find an ancestor that contains an <img>.
-  // That's the visual game card; badge anchors there so it overlays the art.
   function findCardAncestor(el) {
     let current = el.parentElement;
     for (let i = 0; i < 10 && current; i++) {
@@ -114,6 +112,18 @@
       current = current.parentElement;
     }
     return null;
+  }
+
+  // Pull the Steam appid out of any store.steampowered.com link inside the card.
+  // Humble tiles for Steam keys typically include such a link (often the
+  // "Steam Deck Verified" / "% Positive on Steam" link points there).
+  function getAppIdFromCard(cardEl) {
+    const link = cardEl.querySelector(
+      'a[href*="store.steampowered.com/app/"], a[href*="//steampowered.com/app/"]'
+    );
+    if (!link) return null;
+    const match = link.href.match(/\/app\/(\d+)/);
+    return match ? parseInt(match[1], 10) : null;
   }
 
   // ── Counter banner ───────────────────────────────────────────────────────
@@ -140,11 +150,10 @@
       }
     }
 
-    const label = ownedCount === 0
-      ? `You own 0 / ${total} games in this bundle`
-      : ownedCount === total
-        ? `You own all ${total} games in this bundle`
-        : `You own ${ownedCount} / ${total} games in this bundle`;
+    const label =
+      ownedCount === 0 ? `You own 0 / ${total} games in this bundle` :
+      ownedCount === total ? `You own all ${total} games in this bundle` :
+      `You own ${ownedCount} / ${total} games in this bundle`;
 
     counter.textContent = label;
   }
@@ -162,11 +171,11 @@
     mutationObserver.observe(document.body, { childList: true, subtree: true });
   }
 
-  // SPA URL change watcher (separate observer on document so it survives body replacement).
   new MutationObserver(() => {
     if (location.href !== lastUrl) {
       lastUrl = location.href;
-      ownedSet = null;
+      ownedAppids = null;
+      ownedNames = null;
       mutationObserver?.disconnect();
       document.getElementById('hbo-counter')?.remove();
       init();
