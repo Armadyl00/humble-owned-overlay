@@ -1,8 +1,10 @@
 importScripts('lib/normalize.js');
 
 const CACHE_KEY = 'ownedGamesCache';
+const SEARCH_CACHE_KEY = 'steamSearchCache';
 const XML_URL = 'https://steamcommunity.com/my/games/?tab=all&xml=1';
 const USERDATA_URL = 'https://store.steampowered.com/dynamicstore/userdata/';
+const SEARCH_URL = 'https://store.steampowered.com/api/storesearch/';
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.remove(['steamApiKey', 'steamId']).catch(() => {});
@@ -18,6 +20,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'refreshNow') {
     refreshLibrary().then(sendResponse);
+    return true;
+  }
+
+  if (message.type === 'lookupAppids') {
+    lookupAppids(message.games || []).then(sendResponse);
     return true;
   }
 });
@@ -143,6 +150,55 @@ async function tryFetchUserdata() {
   // Name is null when we only have appids — caller marks appidsOnly: true.
   const games = ownedApps.map(appid => ({ appid, name: null }));
   return { ok: true, games };
+}
+
+// ── Steam appid lookup by game name ──────────────────────────────────────────
+// Used by content.js when scanning a Humble bundle page. Humble doesn't expose
+// Steam appids in its bundle JSON, but Steam's storesearch endpoint resolves
+// names to appids reliably. Results are cached keyed on the normalized name so
+// repeat visits don't re-hit Steam.
+
+async function lookupAppids(games) {
+  if (!games.length) return { appids: {} };
+
+  const { [SEARCH_CACHE_KEY]: rawCache } = await chrome.storage.local.get(SEARCH_CACHE_KEY);
+  const cache = rawCache || {};
+  const out = {};
+
+  for (const { machineName, name } of games) {
+    if (!name) continue;
+    const key = normalizeTitle(name);
+
+    if (cache[key] !== undefined) {
+      // Treat null as "we already searched and found nothing" — don't retry.
+      if (cache[key] !== null) out[machineName] = cache[key];
+      continue;
+    }
+
+    const appid = await searchSteamForName(name);
+    cache[key] = appid;
+    if (appid !== null) out[machineName] = appid;
+  }
+
+  await chrome.storage.local.set({ [SEARCH_CACHE_KEY]: cache });
+  return { appids: out };
+}
+
+async function searchSteamForName(name) {
+  const url = `${SEARCH_URL}?term=${encodeURIComponent(name)}&l=english&cc=US`;
+  try {
+    const res = await fetch(url, { credentials: 'omit' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const items = Array.isArray(data?.items) ? data.items : [];
+    // Prefer an exact case-insensitive name match; fall back to the first app.
+    const lower = name.toLowerCase();
+    const exact = items.find(it => it.type === 'app' && (it.name || '').toLowerCase() === lower);
+    const top = items.find(it => it.type === 'app');
+    return (exact?.id ?? top?.id) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // ── result shaping ───────────────────────────────────────────────────────────

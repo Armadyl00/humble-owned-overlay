@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Humble Bundle Owned Overlay",
-  "version": "2.0.2",
+  "version": "2.1.0",
   "description": "Shows which games in a Humble Bundle you already own on Steam.",
   "permissions": ["storage"],
   "host_permissions": [

@@ -37,10 +37,12 @@ Refresh whenever you've bought new games.
 
 ## Matching
 
-Games are matched two ways, in order:
+On a bundle page, the extension uses Humble's own embedded `webpack-bundle-page-data` JSON for the authoritative game list — no fragile DOM scraping. For each bundle game we then resolve a Steam appid via Steam's `storesearch` API (cached locally to avoid repeat requests), and match against your owned-appid set.
 
-1. **By Steam appid** — extracted from the `store.steampowered.com/app/<id>` link inside each Humble tile. Bulletproof when present.
-2. **By normalized title** — fallback for tiles that don't link to Steam. Strips edition suffixes (`Definitive Edition`, `GOTY`, etc.), trademark symbols, and punctuation before comparing.
+Two matching paths, evaluated in order per game:
+
+1. **Appid** — looked up via Steam's storesearch for the bundle game's name, matched against your owned appids. Bulletproof regardless of Steam profile privacy.
+2. **Normalized name** — used as a backup. Strips edition suffixes (`Definitive Edition`, `GOTY`, etc.), trademark symbols, and punctuation. Requires Steam → Privacy → **Game Details = Public** so the XML feed returns names.
 
 ## Project layout
 
@@ -57,6 +59,8 @@ humble-owned-overlay/
 
 ## Versions
 
+- **v2.1.0** — parse Humble's embedded bundle JSON instead of DOM scraping; resolve appids via Steam's storesearch API (cached); kills section-header false positives
+- **v2.0.2** — broader appid extraction, dedup filter clones, diagnostic logging
 - **v2.0.1** — switched from `rgGames` HTML scrape to Steam's XML feed + `dynamicstore/userdata` fallback
 - **v2.0.0** — session-based auth (no API key), Steam appid matching, toolbar popup
 - **v1.1.0** — don't persist the Steam API key, manual-only refresh

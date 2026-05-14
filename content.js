@@ -21,71 +21,168 @@
 
     ownedAppids = new Set(response.ownedAppids);
     ownedNames = new Set(response.ownedNames);
-    tagPage();
+
+    // Prefer Humble's own embedded bundle JSON when present — it's an
+    // authoritative list of the bundle's games with canonical human names.
+    // Falls back to DOM scraping for non-bundle pages (e.g. /games storefront).
+    const bundleGames = extractBundleGames();
+    if (bundleGames && bundleGames.length > 0) {
+      await tagFromBundleData(bundleGames);
+    } else {
+      tagPage();
+    }
+
     startMutationObserver();
   }
 
-  // ── DOM tagging ──────────────────────────────────────────────────────────
+  // ── Embedded bundle data ─────────────────────────────────────────────────
+
+  function extractBundleGames() {
+    const script = document.getElementById('webpack-bundle-page-data');
+    if (!script?.textContent) return null;
+
+    let data;
+    try {
+      data = JSON.parse(script.textContent);
+    } catch {
+      return null;
+    }
+
+    const items = data?.bundleData?.tier_item_data;
+    if (!items || typeof items !== 'object') return null;
+
+    const games = [];
+    for (const [machineName, item] of Object.entries(items)) {
+      // Only include actual games (skip books, soundtracks, etc.)
+      if (item.item_content_type && item.item_content_type !== 'game') continue;
+      // Only games that ship via Steam.
+      if (!item.platforms_and_oses?.game?.steam) continue;
+      if (!item.human_name) continue;
+
+      games.push({
+        machineName,
+        humanName: item.human_name,
+      });
+    }
+    return games;
+  }
+
+  async function tagFromBundleData(games) {
+    // Ask background to resolve each game name to a Steam appid via Steam's
+    // storesearch API (cached). This gives us bulletproof appid matching
+    // even when the user's profile is private and no names are available.
+    const response = await chrome.runtime.sendMessage({
+      type: 'lookupAppids',
+      games: games.map(g => ({ machineName: g.machineName, name: g.humanName })),
+    });
+    const appidMap = response?.appids || {};
+
+    let ownedCount = 0;
+    const diagnostics = [];
+
+    for (const game of games) {
+      const appid = appidMap[game.machineName] || null;
+      const normalizedName = normalizeTitle(game.humanName);
+      const matchedByAppid = appid && ownedAppids.has(appid);
+      const matchedByName = ownedNames.has(normalizedName);
+      const isOwned = matchedByAppid || matchedByName;
+
+      diagnostics.push({
+        humanName: game.humanName,
+        machineName: game.machineName,
+        appid,
+        matchedByAppid,
+        matchedByName,
+      });
+
+      const tileEl = findTileForGame(game);
+      if (isOwned) {
+        ownedCount++;
+        if (tileEl) injectBadge(tileEl);
+      }
+    }
+
+    updateCounter(ownedCount, games.length);
+
+    if (!loggedDiagnostics) {
+      loggedDiagnostics = true;
+      console.group('[Humble Owned Overlay] Bundle scan');
+      console.log(`Owned set: ${ownedAppids.size} appids, ${ownedNames.size} names`);
+      console.log(`Bundle games: ${games.length}, matched: ${ownedCount}`);
+      console.table(diagnostics);
+      if (ownedCount === 0 && games.length > 0) {
+        console.warn(
+          'No matches. If your Steam Game Details are private, the XML feed ' +
+          "won't return names — only appids. We're using Steam's storesearch " +
+          'to resolve appids per game; if those still don\'t match, your ' +
+          'cached owned-set may be stale (click "Refresh from Steam" in the popup).'
+        );
+      }
+      console.groupEnd();
+    }
+  }
+
+  // Locate the DOM tile for a bundle game. Humble's tile images are named
+  // like `<machineName>_storefront.jpg` or contain the machine_name, which
+  // gives us a reliable hook into the DOM regardless of class-name changes.
+  function findTileForGame(game) {
+    const { machineName, humanName } = game;
+
+    const img = document.querySelector(
+      `img[src*="${machineName}_"], img[src*="/${machineName}."], ` +
+      `img[src*="${machineName}.png"], img[src*="${machineName}.jpg"]`
+    );
+    if (img) {
+      const card = findCardAncestor(img);
+      if (card) return card;
+    }
+
+    // Fall back to title-text match.
+    const headings = document.querySelectorAll(
+      'h3, h4, [class*="entity-title"], [class*="game-name"], [class*="game-title"]'
+    );
+    for (const h of headings) {
+      if (h.textContent?.trim() === humanName) {
+        const card = findCardAncestor(h);
+        if (card) return card;
+      }
+    }
+    return null;
+  }
+
+  function injectBadge(cardEl) {
+    if (cardEl.querySelector('.hbo-badge')) return;
+    const badge = document.createElement('span');
+    badge.className = 'hbo-badge';
+    badge.textContent = 'Owned';
+    cardEl.appendChild(badge);
+    const pos = getComputedStyle(cardEl).position;
+    if (pos === 'static') cardEl.style.position = 'relative';
+  }
+
+  // ── DOM tagging fallback (non-bundle pages) ──────────────────────────────
 
   function tagPage() {
     if (!ownedAppids && !ownedNames) return;
 
     const tiles = findGameTiles();
     let ownedCount = 0;
-    const unmatched = [];
 
-    for (const tile of tiles) {
-      const { cardEl, titleText, appid } = tile;
-      const normalizedTitle = normalizeTitle(titleText);
-      const matchedByAppid = appid && ownedAppids.has(appid);
-      const matchedByName = ownedNames.has(normalizedTitle);
-      const isOwned = matchedByAppid || matchedByName;
+    for (const { cardEl, titleText, appid } of tiles) {
+      const isOwned =
+        (appid && ownedAppids.has(appid)) ||
+        ownedNames.has(normalizeTitle(titleText));
 
-      if (!isOwned) {
-        unmatched.push({ titleText, normalizedTitle, appid });
-        continue;
-      }
-
+      if (!isOwned) continue;
       ownedCount++;
-
-      if (!cardEl.querySelector('.hbo-badge')) {
-        const badge = document.createElement('span');
-        badge.className = 'hbo-badge';
-        badge.textContent = 'Owned';
-        cardEl.appendChild(badge);
-        const pos = getComputedStyle(cardEl).position;
-        if (pos === 'static') cardEl.style.position = 'relative';
-      }
+      injectBadge(cardEl);
     }
 
     updateCounter(ownedCount, tiles.length);
-
-    // Diagnostic: when nothing matches but tiles were found, log details so
-    // the user can inspect the page DevTools console and tell us what's there.
-    // Runs only on first pass per page to avoid spam.
-    if (!loggedDiagnostics && tiles.length > 0 && ownedCount === 0) {
-      loggedDiagnostics = true;
-      console.group('[Humble Owned Overlay] No matches — diagnostics');
-      console.log(`Owned: ${ownedAppids.size} appids, ${ownedNames.size} names`);
-      console.log('Sample owned appids:', [...ownedAppids].slice(0, 5));
-      console.log('Sample owned names:', [...ownedNames].slice(0, 5));
-      console.log(`Found ${tiles.length} tiles on page`);
-      console.table(unmatched.slice(0, 15));
-      console.groupEnd();
-    }
   }
-
-  // ── Tile discovery ───────────────────────────────────────────────────────
-  //
-  // Find candidate title elements with targeted selectors, filter out obvious
-  // non-titles (review %, deck status, prices, tier headers), then walk up to
-  // the smallest ancestor that contains an <img> — that's the visual card.
-  // Within each card, look for a Steam store link to extract the appid.
 
   function findGameTiles() {
     const candidates = new Set();
-
-    document.querySelectorAll('h3, h4').forEach(el => candidates.add(el));
 
     document.querySelectorAll(
       '[class*="entity-title"], [class*="entity-name"], ' +
@@ -110,9 +207,6 @@
 
       const appid = getAppIdFromCard(cardEl);
 
-      // Dedup: if we've already seen this appid OR this title, skip. Humble
-      // renders hidden tile clones per bundle-filter (8/6/3 items), so the
-      // same game shows up multiple times in the DOM.
       if (appid && seenAppids.has(appid)) continue;
       if (seenTitles.has(text)) continue;
 
@@ -120,7 +214,6 @@
       seenTitles.add(text);
       results.push({ titleEl, cardEl, titleText: text, appid });
     }
-
     return results;
   }
 
@@ -143,20 +236,10 @@
     return null;
   }
 
-  // Pull the Steam appid out of any Steam link inside the card.
-  // "% Positive on Steam" links typically go to steamcommunity.com/app/<id>/reviews/;
-  // "Steam Deck Verified/Playable" links go to store.steampowered.com or Steam
-  // Deck status pages — both include /app/<id>/ in the URL. We also accept
-  // Humble redirect URLs that embed the Steam appid as a query parameter.
   function getAppIdFromCard(cardEl) {
-    const links = cardEl.querySelectorAll(
-      'a[href*="steampowered.com/app/"], ' +
-      'a[href*="steamcommunity.com/app/"], ' +
-      'a[href*="/app/"]'
-    );
+    const links = cardEl.querySelectorAll('a[href]');
     for (const link of links) {
       const href = link.href || '';
-      // Skip generic /app/ URLs that aren't pointed at Steam at all.
       if (!/steam(powered|community)\.com/.test(href)) continue;
       const match = href.match(/\/app\/(\d+)/);
       if (match) return parseInt(match[1], 10);
@@ -196,16 +279,21 @@
     counter.textContent = label;
   }
 
-  // ── MutationObserver (lazy tiles + SPA navigation) ───────────────────────
+  // ── Observers (lazy tiles + SPA nav) ─────────────────────────────────────
 
   function startMutationObserver() {
     if (mutationObserver) mutationObserver.disconnect();
-
     mutationObserver = new MutationObserver(() => {
       clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(tagPage, 300);
+      debounceTimer = setTimeout(() => {
+        const bundleGames = extractBundleGames();
+        if (bundleGames && bundleGames.length > 0) {
+          tagFromBundleData(bundleGames);
+        } else {
+          tagPage();
+        }
+      }, 300);
     });
-
     mutationObserver.observe(document.body, { childList: true, subtree: true });
   }
 
