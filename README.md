@@ -1,6 +1,8 @@
 # Humble Bundle Owned Overlay
 
-A private Chrome extension that shows which games in a Humble Bundle you already own on Steam.
+A personal Chrome extension that shows which games in a Humble Bundle you already own on Steam.
+
+> **Disclaimer:** This extension was built collaboratively with [Claude](https://claude.com) for personal use and learning. I am not a software engineer. The code is published as-is — review it yourself before installing.
 
 - Green **OWNED** badge on each game tile you already have
 - "X / Y games owned" counter near the bundle title
@@ -53,6 +55,7 @@ lib/normalize.js    # title-normalization helper (edition suffixes, etc.)
 
 ## Versions
 
+- **v3.2.0** — only run on bundle pages; scope tile discovery to the tier container so cross-promo bundles aren't counted
 - **v3.1.0** — restored to the proven-working v1.1 architecture after a few iterations went sideways
 - **v3.0.x / v2.x** — experiments with session-based auth (never reliably worked, reverted)
 - **v1.1.0** — don't persist Steam API key, manual-only refresh
