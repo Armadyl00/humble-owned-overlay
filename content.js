@@ -6,7 +6,20 @@
   let debounceTimer = null;
   let lastUrl = location.href;
 
+  // Bundle pages have a slug after the category segment, e.g.
+  // /games/some-bundle-slug. Listing pages (/games, /books, /software) and
+  // unrelated pages (/, /store, /blog) must be skipped — otherwise the
+  // bundle-card headings on those listings get treated as game tiles.
+  function isBundlePage() {
+    return /^\/(games|books|software|membership)\/[^/]+/.test(location.pathname);
+  }
+
   async function init() {
+    if (!isBundlePage()) {
+      document.getElementById('hbo-counter')?.remove();
+      return;
+    }
+
     const response = await chrome.runtime.sendMessage({ type: 'getOwnedSet' });
 
     if (!response || response.error === 'not_configured') return;
@@ -57,16 +70,30 @@
   // also contains an <img>. That ancestor is the visual game card; the badge
   // sits in its top-left corner.
 
+  // Containers Humble uses for cross-promotional content alongside the
+  // actual bundle (other bundles, Humble Choice promo, book/software
+  // recommendations). Anything inside these must be skipped.
+  const EXCLUDE_CONTAINER_SELECTOR =
+    '.js-other-bundles-view, .other-bundles-view-container, ' +
+    '[class*="cross-sell"], [class*="recommend"], [class*="related-bundle"]';
+
   function findGameTiles() {
+    // Prefer scoping to the bundle's tier view when present; fall back to the
+    // whole document for legacy layouts that don't expose that container.
+    const scope =
+      document.querySelector('.js-desktop-tiers-view') ||
+      document.querySelector('.bundle-page') ||
+      document;
+
     const candidates = new Set();
 
     // h3/h4 are the typical heading levels for game tiles on bundle pages.
     // h1/h2 are excluded — they tend to be bundle/tier headers.
-    document.querySelectorAll('h3, h4').forEach(el => candidates.add(el));
+    scope.querySelectorAll('h3, h4').forEach(el => candidates.add(el));
 
     // Class-name patterns used across various Humble layouts (specific
     // enough to avoid matching review-name / section-title / tier-name).
-    document.querySelectorAll(
+    scope.querySelectorAll(
       '[class*="entity-title"], [class*="entity-name"], ' +
       '[class*="game-name"], [class*="game-title"], ' +
       '[class*="GameName"], [class*="GameTitle"], ' +
@@ -75,12 +102,16 @@
     ).forEach(el => candidates.add(el));
 
     // Classic dd-image-box layout (older bundle pages).
-    document.querySelectorAll('.dd-image-box-caption').forEach(el => candidates.add(el));
+    scope.querySelectorAll('.dd-image-box-caption').forEach(el => candidates.add(el));
 
     const results = [];
     const seen = new Set();
 
     for (const titleEl of candidates) {
+      // Defence-in-depth: if scope is the whole document (fallback), drop
+      // anything inside a known cross-promo container.
+      if (titleEl.closest(EXCLUDE_CONTAINER_SELECTOR)) continue;
+
       const text = (titleEl.textContent || '').trim();
       if (!isLikelyGameTitle(text)) continue;
       if (seen.has(text)) continue;
