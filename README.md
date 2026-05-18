@@ -7,9 +7,24 @@ A personal Chrome extension that shows which games in a Humble Bundle you alread
 - Green **OWNED** badge on each game tile you already have
 - "X / Y games owned" counter near the bundle title
 
+
+## Screenshots
+
+**Options page**
+
+<img src="docs/screenshots/options-page.png" alt="Humble Bundle Owned Overlay options page" width="659">
+
+**Bundle overlay**
+
+<img src="docs/screenshots/bundle-counter.png" alt="Bundle page counter showing seven of eight games owned" width="943">
+
+**Owned game badges**
+
+<img src="docs/screenshots/owned-badge.png" alt="Owned badges over Humble Bundle game tiles" width="949">
+
 ## How it works
 
-You set up a Steam Web API key + SteamID64 once. On the extension's options page, paste those and click **Refresh library** — the extension fetches your owned games from Steam, stores **only the game list** locally, and immediately discards the API key. Next time you want to refresh (after buying new games), you paste the key again.
+You set up a Steam Web API key + SteamID64 once. On the extension's options page, paste those and click **Fetch library** — the extension fetches your owned games from Steam, stores **only the game list** locally, and immediately discards the API key. Next time you want to refresh (after buying new games), you paste the key again.
 
 On any Humble Bundle page, each game tile is matched against your owned games (by normalized title) and badged.
 
@@ -24,13 +39,13 @@ On any Humble Bundle page, each game tile is matched against your owned games (b
 1. Download the ZIP from this repo (Code → Download ZIP) — or `git clone`
 2. Extract to a stable folder
 3. Chrome → `chrome://extensions` → enable **Developer mode** → **Load unpacked** → pick the folder
-4. Right-click the extension → **Options** → paste your Steam API key + SteamID64 → click **Refresh library**
+4. Right-click the extension → **Options** → paste your Steam API key + SteamID64 → click **Fetch library**
 
 ## Use
 
-After the initial refresh, open any Humble Bundle page — owned games get a green badge.
+After the initial fetch, open any Humble Bundle page — owned games get a green badge.
 
-Whenever you want to refresh (e.g. after buying new games), open the extension options, paste the key, click **Refresh library**.
+Whenever you want to refresh (e.g. after buying new games), open the extension options, paste the key, click **Fetch library**.
 
 ## Security
 
