@@ -8,15 +8,26 @@
 
   // Bundle pages have a slug after the category segment, e.g.
   // /games/some-bundle-slug. Listing pages (/games, /books, /software) and
-  // unrelated pages (/, /store, /blog) must be skipped — otherwise the
+  // unrelated pages (/, /store, /blog) must be skipped otherwise the
   // bundle-card headings on those listings get treated as game tiles.
   function isBundlePage() {
-    return /^\/(games|books|software|membership)\/[^/]+/.test(location.pathname);
+    return /^\/(games|books|software)\/[^/]+/.test(location.pathname);
+  }
+
+  function isChoicePage() {
+    return /^\/membership(?:\/|$)/.test(location.pathname);
+  }
+
+  function getPageKind() {
+    if (isChoicePage()) return 'choice';
+    if (isBundlePage()) return 'bundle';
+    return null;
   }
 
   async function init() {
-    if (!isBundlePage()) {
-      document.getElementById('hbo-counter')?.remove();
+    const pageKind = getPageKind();
+    if (!pageKind) {
+      cleanupOverlay();
       return;
     }
 
@@ -34,15 +45,21 @@
     startMutationObserver();
   }
 
-  // ── DOM tagging ──────────────────────────────────────────────────────────
+  // -- DOM tagging -----------------------------------------------------------
 
   function tagPage() {
     if (!ownedSet) return;
 
-    const tiles = findGameTiles();
+    const pageKind = getPageKind();
+    if (!pageKind) {
+      cleanupOverlay();
+      return;
+    }
+
+    const tiles = pageKind === 'choice' ? findChoiceTiles() : findBundleTiles();
     let ownedCount = 0;
 
-    for (const { titleEl, cardEl, titleText } of tiles) {
+    for (const { cardEl, titleText } of tiles) {
       const norm = normalizeTitle(titleText);
       if (ownedSet.has(norm)) {
         ownedCount++;
@@ -59,10 +76,19 @@
       }
     }
 
-    updateCounter(ownedCount, tiles.length);
+    updateCounter(ownedCount, tiles.length, pageKind);
   }
 
-  // ── Tile discovery ───────────────────────────────────────────────────────
+  function cleanupOverlay() {
+    document.getElementById('hbo-counter')?.remove();
+    cleanupBadges();
+  }
+
+  function cleanupBadges() {
+    document.querySelectorAll('.hbo-badge').forEach(badge => badge.remove());
+  }
+
+  // -- Bundle tile discovery ------------------------------------------------
   //
   // Approach: find candidate title elements with targeted selectors, filter
   // out obviously-non-title text (review %, deck status, prices, tier headers),
@@ -77,7 +103,7 @@
     '.js-other-bundles-view, .other-bundles-view-container, ' +
     '[class*="cross-sell"], [class*="recommend"], [class*="related-bundle"]';
 
-  function findGameTiles() {
+  function findBundleTiles() {
     // Prefer scoping to the bundle's tier view when present; fall back to the
     // whole document for legacy layouts that don't expose that container.
     const scope =
@@ -88,7 +114,7 @@
     const candidates = new Set();
 
     // h3/h4 are the typical heading levels for game tiles on bundle pages.
-    // h1/h2 are excluded — they tend to be bundle/tier headers.
+    // h1/h2 are excluded - they tend to be bundle/tier headers.
     scope.querySelectorAll('h3, h4').forEach(el => candidates.add(el));
 
     // Class-name patterns used across various Humble layouts (specific
@@ -133,7 +159,7 @@
     if (/^pay\b/i.test(text)) return false;             // "Pay at least £8.80..."
     if (/\bitem bundle\b/i.test(text)) return false;    // "8 Item Bundle"
     if (/^[$£€]/.test(text)) return false;              // prices
-    // Section headers Humble shows on bundle pages — not games.
+    // Section headers Humble shows on bundle pages - not games.
     if (/^(bundle filters|bundle details|charity information|leaderboard|free with this purchase)$/i.test(text)) return false;
     return true;
   }
@@ -149,9 +175,70 @@
     return null;
   }
 
-  // ── Counter banner ───────────────────────────────────────────────────────
+  // -- Humble Choice discovery ---------------------------------------------
 
-  function updateCounter(ownedCount, total) {
+  function findChoiceTiles() {
+    const results = [];
+    const seen = new Set();
+
+    document.querySelectorAll('.js-discover-game-slide').forEach(slide => {
+      const dataEl = slide.querySelector('[data-machine-name][data-content-choice-data]');
+      if (!dataEl) return;
+
+      const choiceData = parseJsonAttribute(dataEl, 'contentChoiceData');
+      const machineName = dataEl.dataset.machineName;
+      const choice = choiceData?.[machineName];
+      if (!isTrackableChoiceItem(choice)) return;
+
+      const titleText = choice.title.trim();
+      if (seen.has(titleText)) return;
+
+      const cardEl =
+        slide.querySelector('.main-image-wrapper') ||
+        slide.querySelector('img')?.parentElement ||
+        slide;
+
+      seen.add(titleText);
+      results.push({ titleEl: dataEl, cardEl, titleText });
+    });
+
+    if (results.length > 0) return results;
+
+    // If Humble changes the slide markup but keeps the navigation thumbnails,
+    // still provide a counter rather than falling back to unrelated plan cards.
+    document.querySelectorAll('.js-discover-games-nav img[alt]').forEach(img => {
+      const titleText = (img.getAttribute('alt') || '').trim();
+      if (!isLikelyGameTitle(titleText) || seen.has(titleText)) return;
+
+      seen.add(titleText);
+      results.push({ titleEl: img, cardEl: img.parentElement || img, titleText });
+    });
+
+    return results;
+  }
+
+  function parseJsonAttribute(el, datasetKey) {
+    try {
+      const value = el.dataset?.[datasetKey];
+      return value ? JSON.parse(value) : null;
+    } catch (err) {
+      console.warn('[Humble Owned Overlay] Could not parse Choice data', err);
+      return null;
+    }
+  }
+
+  function isTrackableChoiceItem(choice) {
+    if (!choice?.title || !choice.image) return false;
+    if (/^get one month\b/i.test(choice.title)) return false;
+
+    const platforms = Array.isArray(choice.platforms) ? choice.platforms : [];
+    const deliveryMethods = Array.isArray(choice.delivery_methods) ? choice.delivery_methods : [];
+    return platforms.length > 0 || deliveryMethods.includes('steam');
+  }
+
+  // -- Counter banner -------------------------------------------------------
+
+  function updateCounter(ownedCount, total, pageKind) {
     let counter = document.getElementById('hbo-counter');
 
     if (total === 0) {
@@ -163,9 +250,7 @@
       counter = document.createElement('div');
       counter.id = 'hbo-counter';
 
-      const anchor = document.querySelector(
-        'h1, h2, [class*="bundle-name"], [class*="page-title"], [class*="bundle-title"]'
-      );
+      const anchor = findCounterAnchor(pageKind);
       if (anchor) {
         anchor.insertAdjacentElement('afterend', counter);
       } else {
@@ -173,16 +258,31 @@
       }
     }
 
-    const label = ownedCount === 0
-      ? `You own 0 / ${total} games in this bundle`
-      : ownedCount === total
-        ? `You own all ${total} games in this bundle`
-        : `You own ${ownedCount} / ${total} games in this bundle`;
-
-    counter.textContent = label;
+    counter.textContent = buildCounterLabel(ownedCount, total, pageKind);
   }
 
-  // ── MutationObserver (lazy tiles + SPA navigation) ───────────────────────
+  function findCounterAnchor(pageKind) {
+    if (pageKind === 'choice') {
+      return document.querySelector(
+        '.membership-hero h1, [class*="choice-title"], [class*="membership-title"], h1, h2'
+      );
+    }
+
+    return document.querySelector(
+      'h1, h2, [class*="bundle-name"], [class*="page-title"], [class*="bundle-title"]'
+    );
+  }
+
+  function buildCounterLabel(ownedCount, total, pageKind) {
+    const noun = total === 1 ? 'game' : 'games';
+    const context = pageKind === 'choice' ? "this month's Choice" : 'this bundle';
+
+    if (ownedCount === 0) return `You own 0 / ${total} ${noun} in ${context}`;
+    if (ownedCount === total) return `You own all ${total} ${noun} in ${context}`;
+    return `You own ${ownedCount} / ${total} ${noun} in ${context}`;
+  }
+
+  // -- MutationObserver (lazy tiles + SPA navigation) ----------------------
 
   function startMutationObserver() {
     if (mutationObserver) mutationObserver.disconnect();
@@ -201,7 +301,7 @@
       lastUrl = location.href;
       ownedSet = null;
       mutationObserver?.disconnect();
-      document.getElementById('hbo-counter')?.remove();
+      cleanupOverlay();
       init();
     }
   }).observe(document, { subtree: true, childList: true });
