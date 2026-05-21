@@ -70,6 +70,7 @@ lib/normalize.js    # title-normalization helper (edition suffixes, etc.)
 
 ## Versions
 
+- **v3.3.6** — keep OWNED badges below Humble site navigation and Store dropdown menus
 - **v3.3.5** — show the loaded extension version on the options page and position Humble Choice OWNED badges dynamically below CLAIMED badges
 - **v3.3.4** — move Humble Choice OWNED badges farther below CLAIMED badges so the two labels no longer overlap
 - **v3.3.3** — detect Humble Choice's plain `div` month headers and `.subhub-page` grid so the counter anchors above the real games panel
