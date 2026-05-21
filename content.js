@@ -345,18 +345,23 @@
   }
 
   function findChoiceCounterPlacement() {
-    const monthHeader = findTextElement(/^[a-z]+\s+\d{4}\s+games$/i);
+    const monthHeader = findShortTextElement(/^[a-z]+\s+\d{4}\s+games$/i);
     const monthSection = monthHeader ? findChoiceMonthSection(monthHeader) : null;
     if (monthSection) {
       return { element: monthSection, position: 'beforebegin' };
     }
 
-    const yourGames = findTextElement(/^your games$/i);
+    const gamesContainer = findChoiceGamesContainer();
+    if (gamesContainer) {
+      return { element: gamesContainer, position: 'beforebegin' };
+    }
+
+    const yourGames = findShortTextElement(/^your games$/i) || findTextElement(/^your games$/i);
     if (yourGames) {
       return { element: yourGames, position: 'afterend' };
     }
 
-    const choiceTitle = findTextElement(/^humble choice$/i);
+    const choiceTitle = findShortTextElement(/^humble choice$/i) || findTextElement(/^humble choice$/i);
     if (choiceTitle) {
       return { element: choiceTitle, position: 'afterend' };
     }
@@ -384,6 +389,19 @@
     return monthHeader;
   }
 
+  function findChoiceGamesContainer() {
+    const steamSelector = '.hb-steam, [aria-label="Steam"], [title="Steam"], img[alt="Steam"]';
+    const subhubPage = document.querySelector('.subhub-page');
+    const candidates = subhubPage
+      ? Array.from(subhubPage.children)
+      : Array.from(document.querySelectorAll('.grid, [class*="games-list"], [class*="content-choice"]'));
+
+    return candidates.find(el => (
+      el.querySelectorAll(steamSelector).length >= 2 ||
+      el.querySelectorAll('img').length >= 4
+    )) || null;
+  }
+
   function findCounterAnchor(pageKind) {
     if (pageKind === 'choice') {
       const placement = findChoiceCounterPlacement();
@@ -401,6 +419,21 @@
       const text = (el.textContent || '').trim();
       return pattern.test(text);
     }) || null;
+  }
+
+  function findShortTextElement(pattern) {
+    const selectors = 'h1, h2, h3, h4, div, span, p, [class*="title"], [class*="heading"], [class*="header"]';
+
+    return Array.from(document.querySelectorAll(selectors)).find(el => {
+      const text = normalizeElementText(el);
+      if (!text || text.length > 80 || !pattern.test(text)) return false;
+
+      return Array.from(el.children).every(child => normalizeElementText(child) !== text);
+    }) || null;
+  }
+
+  function normalizeElementText(el) {
+    return (el.textContent || '').replace(/\s+/g, ' ').trim();
   }
 
   function buildCounterLabel(ownedCount, total, pageKind) {
