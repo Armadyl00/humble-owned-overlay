@@ -3,6 +3,15 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { validateExtension } from './validate-extension.mjs';
 
+const CRC_TABLE = new Uint32Array(256);
+for (let i = 0; i < CRC_TABLE.length; i += 1) {
+  let value = i;
+  for (let bit = 0; bit < 8; bit += 1) {
+    value = (value & 1) ? (0xedb88320 ^ (value >>> 1)) : (value >>> 1);
+  }
+  CRC_TABLE[i] = value >>> 0;
+}
+
 const root = process.cwd();
 const { manifest, releaseFiles } = validateExtension(root);
 const releaseTag = getReleaseTag(manifest.version);
@@ -115,13 +124,4 @@ function crc32(buffer) {
     crc = (crc >>> 8) ^ CRC_TABLE[(crc ^ byte) & 0xff];
   }
   return (crc ^ 0xffffffff) >>> 0;
-}
-
-const CRC_TABLE = new Uint32Array(256);
-for (let i = 0; i < CRC_TABLE.length; i += 1) {
-  let value = i;
-  for (let bit = 0; bit < 8; bit += 1) {
-    value = (value & 1) ? (0xedb88320 ^ (value >>> 1)) : (value >>> 1);
-  }
-  CRC_TABLE[i] = value >>> 0;
 }
