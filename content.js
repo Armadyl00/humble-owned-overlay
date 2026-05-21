@@ -6,12 +6,11 @@
   let debounceTimer = null;
   let lastUrl = location.href;
 
-  // Bundle pages have a slug after the category segment, e.g.
-  // /games/some-bundle-slug. Listing pages (/games, /books, /software) and
-  // unrelated pages (/, /store, /blog) must be skipped otherwise the
-  // bundle-card headings on those listings get treated as game tiles.
+  // Game bundle pages have a slug after /games, e.g. /games/some-bundle-slug.
+  // Listing pages (/games) and non-game bundle categories (/books, /software)
+  // are skipped because this extension only checks Steam game ownership.
   function isBundlePage() {
-    return /^\/(games|books|software)\/[^/]+/.test(location.pathname);
+    return /^\/games\/[^/]+/.test(location.pathname);
   }
 
   function isChoicePage() {
@@ -158,6 +157,7 @@
     if (/^steam deck\b/i.test(text)) return false;      // "Steam Deck Playable"
     if (/^pay\b/i.test(text)) return false;             // "Pay at least £8.80..."
     if (/\bitem bundle\b/i.test(text)) return false;    // "8 Item Bundle"
+    if (/\bplaytest\b/i.test(text)) return false;
     if (/^[$£€]/.test(text)) return false;              // prices
     // Section headers Humble shows on bundle pages - not games.
     if (/^(bundle filters|bundle details|charity information|leaderboard|free with this purchase)$/i.test(text)) return false;
@@ -217,6 +217,7 @@
 
   function isTrackableChoiceItem(choice) {
     if (!choice?.title || !choice.image) return false;
+    if (/\bplaytest\b/i.test(choice.title)) return false;
 
     const deliveryMethods = Array.isArray(choice.delivery_methods) ? choice.delivery_methods : [];
     return deliveryMethods.includes('steam');
