@@ -70,6 +70,7 @@ lib/normalize.js    # title-normalization helper (edition suffixes, etc.)
 
 ## Versions
 
+- **v3.3.4** — move Humble Choice OWNED badges farther below CLAIMED badges so the two labels no longer overlap
 - **v3.3.3** — detect Humble Choice's plain `div` month headers and `.subhub-page` grid so the counter anchors above the real games panel
 - **v3.3.2** — keep the Humble Choice counter in the page flow above the games grid instead of letting Humble's layout push it to the top-right
 - **v3.3.1** — fix Humble Choice `/membership/home` by detecting Steam game cards in the logged-in claimed-games grid
