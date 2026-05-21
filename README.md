@@ -26,7 +26,7 @@ A personal Chrome extension that shows which games in a Humble Bundle you alread
 
 You set up a Steam Web API key + SteamID64 once. On the extension's options page, paste those and click **Fetch library** — the extension fetches your owned games from Steam, stores **only the game list** locally, and immediately discards the API key. Next time you want to refresh (after buying new games), you paste the key again.
 
-On any Humble Bundle page, each game tile is matched against your owned games (by normalized title) and badged.
+On supported Humble game bundle and Humble Choice pages, each Steam game tile is matched against your owned games (by normalized title) and badged. Non-Steam Choice items, playtests, books, and software bundles are ignored.
 
 ## Setup
 
@@ -43,7 +43,7 @@ On any Humble Bundle page, each game tile is matched against your owned games (b
 
 ## Use
 
-After the initial fetch, open any Humble Bundle page — owned games get a green badge.
+After the initial fetch, open any supported Humble game bundle or Humble Choice page — owned Steam games get a green badge.
 
 Whenever you want to refresh (e.g. after buying new games), open the extension options, paste the key, click **Fetch library**.
 
@@ -70,7 +70,8 @@ lib/normalize.js    # title-normalization helper (edition suffixes, etc.)
 
 ## Versions
 
-- **v3.2.0** — only run on bundle pages; scope tile discovery to the tier container so cross-promo bundles aren't counted
+- **v3.3.0** — add Humble Choice page support for Steam-delivered games only; ignore non-Steam Choice items and playtests
+- **v3.2.0** — only run on game bundle pages; scope tile discovery to the tier container so cross-promo bundles aren't counted
 - **v3.1.0** — restored to the proven-working v1.1 architecture after a few iterations went sideways
 - **v3.0.x / v2.x** — experiments with session-based auth (never reliably worked, reverted)
 - **v1.1.0** — don't persist Steam API key, manual-only refresh
