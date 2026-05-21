@@ -10,6 +10,8 @@ const cacheInfoEl = document.getElementById('cache-info');
 // ── Init ────────────────────────────────────────────────────────────────────
 // Load saved Steam ID + cache info. The API key field is intentionally NOT
 // pre-populated — we don't store it anywhere.
+showExtensionVersion();
+
 chrome.storage.local.get(['steamId', 'ownedGamesCache', 'steamApiKey'], async result => {
   if (result.steamId) steamIdInput.value = result.steamId;
   updateCacheInfo(result.ownedGamesCache);
@@ -93,6 +95,26 @@ refreshBtn.addEventListener('click', async () => {
 });
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+function showExtensionVersion() {
+  const title = document.querySelector('h1');
+  if (!title) return;
+
+  const version = document.createElement('span');
+  version.textContent = `v${chrome.runtime.getManifest().version}`;
+  version.style.display = 'inline-block';
+  version.style.margin = '0 0 18px';
+  version.style.padding = '4px 8px';
+  version.style.border = '1px solid #2a2a4a';
+  version.style.borderRadius = '999px';
+  version.style.background = '#16213e';
+  version.style.color = '#aaa';
+  version.style.fontSize = '12px';
+  version.style.fontWeight = '600';
+  version.style.lineHeight = '1';
+
+  title.insertAdjacentElement('afterend', version);
+}
+
 function showStatus(message, type) {
   statusEl.textContent = message;
   statusEl.className = type;
