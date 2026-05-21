@@ -18,6 +18,10 @@
   line-height: 1.4;
 }
 
+.hbo-badge-below-claimed {
+  top: 36px;
+}
+
 /* Summary counter inserted after the bundle/page title */
 #hbo-counter {
   display: inline-block;
