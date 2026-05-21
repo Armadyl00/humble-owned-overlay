@@ -70,6 +70,7 @@ lib/normalize.js    # title-normalization helper (edition suffixes, etc.)
 
 ## Versions
 
+- **v3.3.1** — fix Humble Choice `/membership/home` by detecting Steam game cards in the logged-in claimed-games grid
 - **v3.3.0** — add Humble Choice page support for Steam-delivered games only; ignore non-Steam Choice items and playtests
 - **v3.2.0** — only run on game bundle pages; scope tile discovery to the tier container so cross-promo bundles aren't counted
 - **v3.1.0** — restored to the proven-working v1.1 architecture after a few iterations went sideways
