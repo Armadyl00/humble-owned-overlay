@@ -8,6 +8,7 @@ const EXPECTED_HOST_PERMISSIONS = [
   'https://api.steampowered.com/*'
 ];
 const EXPECTED_CONTENT_MATCHES = ['https://www.humblebundle.com/*'];
+const EXPECTED_ACTION_TITLE = 'Open Humble Bundle Owned Overlay options';
 
 export function validateExtension(root = process.cwd()) {
   const releaseFiles = new Set(['manifest.json', 'LICENSE']);
@@ -19,6 +20,7 @@ export function validateExtension(root = process.cwd()) {
   assert(typeof manifest.description === 'string' && manifest.description.trim(), 'manifest description is required');
   assertSameMembers('permissions', manifest.permissions, EXPECTED_PERMISSIONS);
   assertSameMembers('host_permissions', manifest.host_permissions, EXPECTED_HOST_PERMISSIONS);
+  assert(manifest.action?.default_title === EXPECTED_ACTION_TITLE, `action.default_title must be: ${EXPECTED_ACTION_TITLE}`);
 
   const background = manifest.background?.service_worker;
   assert(typeof background === 'string' && background.endsWith('.js'), 'background.service_worker must be a JS file');
