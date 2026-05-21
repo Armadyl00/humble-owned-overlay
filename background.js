@@ -7,6 +7,10 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.remove('steamApiKey').catch(() => {});
 });
 
+chrome.action.onClicked.addListener(() => {
+  chrome.runtime.openOptionsPage();
+});
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) return;
 
