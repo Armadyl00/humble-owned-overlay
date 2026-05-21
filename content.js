@@ -64,7 +64,9 @@
         ownedCount++;
         if (!cardEl.querySelector('.hbo-badge')) {
           const badge = document.createElement('span');
-          badge.className = 'hbo-badge';
+          badge.className = pageKind === 'choice' && hasClaimedBadge(cardEl)
+            ? 'hbo-badge hbo-badge-below-claimed'
+            : 'hbo-badge';
           badge.textContent = 'Owned';
           cardEl.appendChild(badge);
           // cardEl needs relative positioning for the badge to anchor correctly;
@@ -85,6 +87,10 @@
 
   function cleanupBadges() {
     document.querySelectorAll('.hbo-badge').forEach(badge => badge.remove());
+  }
+
+  function hasClaimedBadge(cardEl) {
+    return /\bclaimed\b/i.test(cardEl.textContent || '');
   }
 
   // -- Bundle tile discovery ------------------------------------------------
@@ -309,14 +315,23 @@
 
   function findCounterAnchor(pageKind) {
     if (pageKind === 'choice') {
-      return document.querySelector(
-        '.membership-hero h1, [class*="choice-title"], [class*="membership-title"], h1, h2'
-      );
+      return findTextElement(/^(your games|humble choice)$/i) ||
+        findTextElement(/^[a-z]+\s+\d{4}\s+games$/i) ||
+        document.querySelector('.js-games-view, [class*="games-list"], [class*="content-choice"]') ||
+        document.querySelector('.membership-hero h1, [class*="choice-title"], [class*="membership-title"], h1, h2');
     }
 
     return document.querySelector(
       'h1, h2, [class*="bundle-name"], [class*="page-title"], [class*="bundle-title"]'
     );
+  }
+
+  function findTextElement(pattern) {
+    const selectors = 'h1, h2, h3, h4, [class*="title"], [class*="heading"], [class*="header"]';
+    return Array.from(document.querySelectorAll(selectors)).find(el => {
+      const text = (el.textContent || '').trim();
+      return pattern.test(text);
+    }) || null;
   }
 
   function buildCounterLabel(ownedCount, total, pageKind) {
