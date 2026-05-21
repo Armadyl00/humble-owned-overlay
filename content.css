@@ -22,9 +22,24 @@
   top: 36px;
 }
 
-/* Summary counter inserted after the bundle/page title */
+/* Summary counter inserted near the bundle/page title */
+#hbo-counter-row {
+  display: block !important;
+  width: 100% !important;
+  clear: both;
+  position: static !important;
+  margin: 8px 0 14px;
+  text-align: left !important;
+}
+
 #hbo-counter {
-  display: inline-block;
+  display: inline-block !important;
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  float: none !important;
+  width: auto;
+  max-width: min(360px, calc(100vw - 32px));
   margin: 6px 0 10px;
   padding: 5px 12px;
   border-radius: 6px;
@@ -33,4 +48,8 @@
   color: #fff;
   background: #1a9e1a;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+#hbo-counter.hbo-choice-counter {
+  margin: 0;
 }
