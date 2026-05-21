@@ -81,6 +81,7 @@
   }
 
   function cleanupOverlay() {
+    document.getElementById('hbo-counter-row')?.remove();
     document.getElementById('hbo-counter')?.remove();
     cleanupBadges();
   }
@@ -294,6 +295,7 @@
     let counter = document.getElementById('hbo-counter');
 
     if (total === 0) {
+      document.getElementById('hbo-counter-row')?.remove();
       counter?.remove();
       return;
     }
@@ -301,24 +303,91 @@
     if (!counter) {
       counter = document.createElement('div');
       counter.id = 'hbo-counter';
+    }
 
-      const anchor = findCounterAnchor(pageKind);
-      if (anchor) {
-        anchor.insertAdjacentElement('afterend', counter);
-      } else {
-        document.body.prepend(counter);
-      }
+    counter.classList.toggle('hbo-choice-counter', pageKind === 'choice');
+
+    if (pageKind === 'choice') {
+      placeChoiceCounter(counter);
+    } else {
+      placeBundleCounter(counter);
     }
 
     counter.textContent = buildCounterLabel(ownedCount, total, pageKind);
   }
 
+  function placeChoiceCounter(counter) {
+    let row = document.getElementById('hbo-counter-row');
+    if (!row) {
+      row = document.createElement('div');
+      row.id = 'hbo-counter-row';
+    }
+
+    if (counter.parentElement !== row) row.appendChild(counter);
+
+    const placement = findChoiceCounterPlacement();
+    if (placement) {
+      placement.element.insertAdjacentElement(placement.position, row);
+    } else {
+      document.body.prepend(row);
+    }
+  }
+
+  function placeBundleCounter(counter) {
+    document.getElementById('hbo-counter-row')?.remove();
+
+    const anchor = findCounterAnchor('bundle');
+    if (anchor) {
+      anchor.insertAdjacentElement('afterend', counter);
+    } else {
+      document.body.prepend(counter);
+    }
+  }
+
+  function findChoiceCounterPlacement() {
+    const monthHeader = findTextElement(/^[a-z]+\s+\d{4}\s+games$/i);
+    const monthSection = monthHeader ? findChoiceMonthSection(monthHeader) : null;
+    if (monthSection) {
+      return { element: monthSection, position: 'beforebegin' };
+    }
+
+    const yourGames = findTextElement(/^your games$/i);
+    if (yourGames) {
+      return { element: yourGames, position: 'afterend' };
+    }
+
+    const choiceTitle = findTextElement(/^humble choice$/i);
+    if (choiceTitle) {
+      return { element: choiceTitle, position: 'afterend' };
+    }
+
+    const gamesView = document.querySelector('.js-games-view, [class*="games-list"], [class*="content-choice"]');
+    if (gamesView) {
+      return { element: gamesView, position: 'beforebegin' };
+    }
+
+    return null;
+  }
+
+  function findChoiceMonthSection(monthHeader) {
+    let current = monthHeader.parentElement;
+    for (let i = 0; i < 8 && current; i++) {
+      const steamIconCount = current.querySelectorAll(
+        '.hb-steam, [aria-label="Steam"], [title="Steam"], img[alt="Steam"]'
+      ).length;
+      const imageCount = current.querySelectorAll('img').length;
+
+      if (steamIconCount >= 2 || imageCount >= 4) return current;
+      current = current.parentElement;
+    }
+
+    return monthHeader;
+  }
+
   function findCounterAnchor(pageKind) {
     if (pageKind === 'choice') {
-      return findTextElement(/^(your games|humble choice)$/i) ||
-        findTextElement(/^[a-z]+\s+\d{4}\s+games$/i) ||
-        document.querySelector('.js-games-view, [class*="games-list"], [class*="content-choice"]') ||
-        document.querySelector('.membership-hero h1, [class*="choice-title"], [class*="membership-title"], h1, h2');
+      const placement = findChoiceCounterPlacement();
+      return placement?.element || null;
     }
 
     return document.querySelector(
