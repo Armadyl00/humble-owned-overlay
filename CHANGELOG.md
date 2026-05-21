@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.3.8-canary.1
+
+- Open the extension options page when the pinned toolbar icon is clicked.
+
 ## v3.3.7-canary.1
 
 - Add canary prerelease automation that validates the extension, runs tests, builds a clean ZIP, and uploads it to GitHub Releases.
