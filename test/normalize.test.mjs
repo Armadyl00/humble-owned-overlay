@@ -14,5 +14,5 @@ test('normalizes trademarks, punctuation, accents, and whitespace', () => {
 test('removes common edition suffixes', () => {
   assert.equal(normalizeTitle('Batman: Arkham City - Game of the Year Edition'), 'batman arkham city');
   assert.equal(normalizeTitle('Dishonored Definitive Edition'), 'dishonored');
-  assert.equal(normalizeTitle("Director's Cut"), '');
+  assert.equal(normalizeTitle("Death Stranding Director's Cut"), 'death stranding');
 });
