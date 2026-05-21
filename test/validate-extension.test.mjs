@@ -8,7 +8,7 @@ import { validateExtension } from '../scripts/validate-extension.mjs';
 test('validates the current extension manifest', () => {
   const { manifest, releaseFiles } = validateExtension(process.cwd());
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, '3.3.7');
+  assert.equal(manifest.version, '3.3.8');
   assert.deepEqual(releaseFiles, [
     'LICENSE',
     'background.js',
@@ -51,13 +51,16 @@ function makeFixture() {
   fs.writeFileSync(path.join(root, 'manifest.json'), `${JSON.stringify({
     manifest_version: 3,
     name: 'Humble Bundle Owned Overlay',
-    version: '3.3.7',
+    version: '3.3.8',
     description: 'Shows which games in a Humble Bundle you already own on Steam.',
     permissions: ['storage'],
     host_permissions: [
       'https://www.humblebundle.com/*',
       'https://api.steampowered.com/*'
     ],
+    action: {
+      default_title: 'Open Humble Bundle Owned Overlay options'
+    },
     background: { service_worker: 'background.js' },
     content_scripts: [{
       matches: ['https://www.humblebundle.com/*'],
