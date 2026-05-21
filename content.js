@@ -155,6 +155,9 @@
     if (!text || text.length < 2 || text.length > 100) return false;
     if (/^\d+%\b/.test(text)) return false;             // "94% Positive on Steam"
     if (/^steam deck\b/i.test(text)) return false;      // "Steam Deck Playable"
+    if (/^steam$/i.test(text)) return false;
+    if (/^claimed$/i.test(text)) return false;
+    if (/^redeemed\b/i.test(text)) return false;
     if (/^pay\b/i.test(text)) return false;             // "Pay at least £8.80..."
     if (/\bitem bundle\b/i.test(text)) return false;    // "8 Item Bundle"
     if (/\bplaytest\b/i.test(text)) return false;
@@ -202,7 +205,63 @@
       results.push({ titleEl: dataEl, cardEl, titleText });
     });
 
+    if (results.length > 0) return results;
+
+    return findChoiceSteamIconTiles(seen);
+  }
+
+  function findChoiceSteamIconTiles(seen) {
+    const results = [];
+
+    document.querySelectorAll('.hb-steam, [aria-label="Steam"], [title="Steam"], img[alt="Steam"]').forEach(steamEl => {
+      const cardEl = findChoiceCardAncestor(steamEl);
+      if (!cardEl) return;
+
+      const titleText = findChoiceCardTitle(cardEl);
+      if (!titleText || seen.has(titleText)) return;
+
+      seen.add(titleText);
+      results.push({ titleEl: steamEl, cardEl, titleText });
+    });
+
     return results;
+  }
+
+  function findChoiceCardAncestor(el) {
+    let current = el.parentElement;
+    for (let i = 0; i < 8 && current; i++) {
+      if (current.querySelector('img') && findChoiceCardTitle(current)) return current;
+      current = current.parentElement;
+    }
+    return null;
+  }
+
+  function findChoiceCardTitle(cardEl) {
+    const imageTitle = Array.from(cardEl.querySelectorAll('img[alt]'))
+      .map(img => (img.getAttribute('alt') || '').trim())
+      .find(isLikelyGameTitle);
+    if (imageTitle) return imageTitle;
+
+    const titleSelectors = [
+      '[class*="game-title"]',
+      '[class*="game-name"]',
+      '[class*="human-name"]',
+      '[class*="product-title"]',
+      '[class*="product-name"]',
+      '[class*="title"]',
+      'h3',
+      'h4',
+      'h5'
+    ];
+
+    for (const selector of titleSelectors) {
+      const title = Array.from(cardEl.querySelectorAll(selector))
+        .map(el => (el.textContent || '').trim())
+        .find(isLikelyGameTitle);
+      if (title) return title;
+    }
+
+    return '';
   }
 
   function parseJsonAttribute(el, datasetKey) {
