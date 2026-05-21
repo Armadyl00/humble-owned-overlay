@@ -202,18 +202,6 @@
       results.push({ titleEl: dataEl, cardEl, titleText });
     });
 
-    if (results.length > 0) return results;
-
-    // If Humble changes the slide markup but keeps the navigation thumbnails,
-    // still provide a counter rather than falling back to unrelated plan cards.
-    document.querySelectorAll('.js-discover-games-nav img[alt]').forEach(img => {
-      const titleText = (img.getAttribute('alt') || '').trim();
-      if (!isLikelyGameTitle(titleText) || seen.has(titleText)) return;
-
-      seen.add(titleText);
-      results.push({ titleEl: img, cardEl: img.parentElement || img, titleText });
-    });
-
     return results;
   }
 
@@ -229,11 +217,9 @@
 
   function isTrackableChoiceItem(choice) {
     if (!choice?.title || !choice.image) return false;
-    if (/^get one month\b/i.test(choice.title)) return false;
 
-    const platforms = Array.isArray(choice.platforms) ? choice.platforms : [];
     const deliveryMethods = Array.isArray(choice.delivery_methods) ? choice.delivery_methods : [];
-    return platforms.length > 0 || deliveryMethods.includes('steam');
+    return deliveryMethods.includes('steam');
   }
 
   // -- Counter banner -------------------------------------------------------
