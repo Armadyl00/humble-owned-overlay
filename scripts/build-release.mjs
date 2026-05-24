@@ -28,11 +28,11 @@ console.log(`Packaged files: ${releaseFiles.join(', ')}`);
 
 function getReleaseTag(version) {
   const envTag = process.env.RELEASE_TAG || process.env.GITHUB_REF_NAME;
-  if (!envTag) return `v${version}-canary.local`;
+  if (!envTag) return `v${version}`;
 
-  const match = /^v(\d+\.\d+\.\d+)-canary\.(\d+)$/.exec(envTag);
+  const match = /^v(\d+\.\d+\.\d+)(?:-canary\.(\d+))?$/.exec(envTag);
   if (!match) {
-    throw new Error(`Release tag must look like v${version}-canary.N: ${envTag}`);
+    throw new Error(`Release tag must look like v${version} or v${version}-canary.N: ${envTag}`);
   }
   if (match[1] !== version) {
     throw new Error(`Release tag version ${match[1]} does not match manifest version ${version}`);
