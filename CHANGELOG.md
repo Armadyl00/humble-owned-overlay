@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.3.8
+
+- Open the extension options page when the pinned toolbar icon is clicked.
+- Add clean release package tooling for Chrome Web Store uploads.
+- Move the README version history into this changelog.
+
 ## v3.3.8-canary.1
 
 - Open the extension options page when the pinned toolbar icon is clicked.
