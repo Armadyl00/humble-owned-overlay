@@ -326,6 +326,8 @@
     if (counter.parentElement !== row) row.appendChild(counter);
 
     const placement = findChoiceCounterPlacement();
+    row.classList.toggle('hbo-public-choice-counter-row', placement?.kind === 'public-choice-games');
+
     if (placement) {
       placement.element.insertAdjacentElement(placement.position, row);
     } else {
@@ -351,6 +353,11 @@
       return { element: monthSection, position: 'beforebegin' };
     }
 
+    const publicChoiceIntro = findPublicChoiceGamesIntro();
+    if (publicChoiceIntro) {
+      return { element: publicChoiceIntro, position: 'afterend', kind: 'public-choice-games' };
+    }
+
     const gamesContainer = findChoiceGamesContainer();
     if (gamesContainer) {
       return { element: gamesContainer, position: 'beforebegin' };
@@ -372,6 +379,23 @@
     }
 
     return null;
+  }
+
+  function findPublicChoiceGamesIntro() {
+    const heading = findShortTextElement(/^this month's games$/i) || findTextElement(/^this month's games$/i);
+    if (!heading) return null;
+
+    let current = heading.parentElement;
+    for (let i = 0; i < 6 && current; i++) {
+      const text = normalizeElementText(current);
+      const imageCount = current.querySelectorAll('img').length;
+      if (/^this month's games\b/i.test(text) && text.length <= 400 && imageCount === 0) {
+        return current;
+      }
+      current = current.parentElement;
+    }
+
+    return heading;
   }
 
   function findChoiceMonthSection(monthHeader) {
