@@ -1,0 +1,57 @@
+name: Canary Release
+
+on:
+  push:
+    tags:
+      - 'v*-canary.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.repository == 'Armadyl00/humble-owned-overlay'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run tests
+        run: npm test
+
+      - name: Validate extension
+        run: npm run validate
+
+      - name: Build release ZIP
+        run: npm run build:zip
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+
+      - name: Build release notes
+        run: node scripts/release-notes.mjs "${{ github.ref_name }}" > release-notes.md
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+
+      - name: Verify release asset
+        run: test "$(find dist -maxdepth 1 -name '*.zip' | wc -l)" -eq 1
+
+      - name: Publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          asset="$(ls dist/*.zip)"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG" --notes-file release-notes.md --prerelease
+            gh release upload "$RELEASE_TAG" "$asset" --clobber
+          else
+            gh release create "$RELEASE_TAG" "$asset" --title "$RELEASE_TAG" --notes-file release-notes.md --prerelease --target "$GITHUB_SHA"
+          fi

@@ -68,20 +68,9 @@ options.html/.js    # settings page
 lib/normalize.js    # title-normalization helper (edition suffixes, etc.)
 ```
 
-## Versions
+## Changelog
 
-- **v3.3.6** — keep OWNED badges below Humble site navigation and Store dropdown menus
-- **v3.3.5** — show the loaded extension version on the options page and position Humble Choice OWNED badges dynamically below CLAIMED badges
-- **v3.3.4** — move Humble Choice OWNED badges farther below CLAIMED badges so the two labels no longer overlap
-- **v3.3.3** — detect Humble Choice's plain `div` month headers and `.subhub-page` grid so the counter anchors above the real games panel
-- **v3.3.2** — keep the Humble Choice counter in the page flow above the games grid instead of letting Humble's layout push it to the top-right
-- **v3.3.1** — fix Humble Choice `/membership/home` by detecting Steam game cards in the logged-in claimed-games grid
-- **v3.3.0** — add Humble Choice page support for Steam-delivered games only; ignore non-Steam Choice items and playtests
-- **v3.2.0** — only run on game bundle pages; scope tile discovery to the tier container so cross-promo bundles aren't counted
-- **v3.1.0** — restored to the proven-working v1.1 architecture after a few iterations went sideways
-- **v3.0.x / v2.x** — experiments with session-based auth (never reliably worked, reverted)
-- **v1.1.0** — don't persist Steam API key, manual-only refresh
-- **v1.0.0** — initial release
+See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## License
 

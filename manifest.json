@@ -1,13 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Humble Bundle Owned Overlay",
-  "version": "3.3.6",
+  "version": "3.3.8",
   "description": "Shows which games in a Humble Bundle you already own on Steam.",
   "permissions": ["storage"],
   "host_permissions": [
     "https://www.humblebundle.com/*",
     "https://api.steampowered.com/*"
   ],
+  "action": {
+    "default_title": "Open Humble Bundle Owned Overlay options"
+  },
   "background": {
     "service_worker": "background.js"
   },
