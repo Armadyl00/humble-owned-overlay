@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.3.9
+
+- Center the owned-games counter on the public Humble Choice membership page for signed-out and non-Choice users.
+
 ## v3.3.8
 
 - Open the extension options page when the pinned toolbar icon is clicked.
