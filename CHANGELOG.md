@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.4.1
+
+- Add a toolbar popup with library cache status and an options shortcut.
+
 ## v3.4.0
 
 - Add `Owned` badges to matching Steam games on Humble Library and Purchases pages.

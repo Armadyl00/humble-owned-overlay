@@ -7,6 +7,7 @@ A personal Chrome extension that shows which games in a Humble Bundle you alread
 - Green **OWNED** badge on each game tile you already have
 - "X / Y games owned" counter near the bundle title
 - **OWNED** badges on matching Humble Library and Purchases entries
+- Toolbar popup with library cache status and a settings shortcut
 
 
 ## Screenshots
@@ -48,6 +49,8 @@ After the initial fetch, open any supported Humble game bundle, Humble Choice, L
 
 Whenever you want to refresh (e.g. after buying new games), open the extension options, paste the key, click **Fetch library**.
 
+Click the pinned toolbar icon to check how many games are cached and when the library was last refreshed.
+
 ## Security
 
 - **API key is never written to disk.** It only exists in memory long enough to call Steam, then gets wiped from the input field. Keep the key in a password manager and paste it whenever you want to refresh.
@@ -65,6 +68,7 @@ manifest.json       # MV3 manifest, minimal permissions
 background.js       # service worker — Steam API fetch + cache
 content.js          # runs on humblebundle.com — DOM scan + badging
 content.css         # badge + counter styling
+popup.html/.js      # toolbar cache-status popup
 options.html/.js    # settings page
 lib/normalize.js    # title-normalization helper (edition suffixes, etc.)
 ```

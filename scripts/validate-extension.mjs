@@ -21,6 +21,13 @@ export function validateExtension(root = process.cwd()) {
   assertSameMembers('permissions', manifest.permissions, EXPECTED_PERMISSIONS);
   assertSameMembers('host_permissions', manifest.host_permissions, EXPECTED_HOST_PERMISSIONS);
   assert(manifest.action?.default_title === EXPECTED_ACTION_TITLE, `action.default_title must be: ${EXPECTED_ACTION_TITLE}`);
+  if (manifest.action?.default_popup) {
+    const popupPage = manifest.action.default_popup;
+    assert(typeof popupPage === 'string' && popupPage.endsWith('.html'), 'action.default_popup must be an HTML file');
+    assertFile(root, popupPage, 'action popup');
+    releaseFiles.add(popupPage);
+    collectHtmlScripts(root, popupPage).forEach(file => releaseFiles.add(file));
+  }
 
   const background = manifest.background?.service_worker;
   assert(typeof background === 'string' && background.endsWith('.js'), 'background.service_worker must be a JS file');
