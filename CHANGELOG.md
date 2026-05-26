@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.4.3
+
+- Fix Humble Library and Purchases badge detection on account list rows.
+- Link more expanded bundle titles by reading exact Steam app links already present in the expanded panel.
+
 ## v3.4.2
 
 - Link expanded bundle game titles to exact Steam store pages when the cached Steam library includes an app ID.
