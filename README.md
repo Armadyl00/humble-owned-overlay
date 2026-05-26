@@ -7,7 +7,6 @@ A personal Chrome extension that shows which games in a Humble Bundle you alread
 - Green **OWNED** badge on each game tile you already have
 - "X / Y games owned" counter near the bundle title
 - Toolbar popup with library cache status and a settings shortcut
-- Expanded bundle game titles link to exact Steam store pages when known
 
 
 ## Screenshots
@@ -29,8 +28,6 @@ A personal Chrome extension that shows which games in a Humble Bundle you alread
 You set up a Steam Web API key + SteamID64 once. On the extension's options page, paste those and click **Fetch library** — the extension fetches your owned games from Steam, stores **only the game list** locally, and immediately discards the API key. Next time you want to refresh (after buying new games), you paste the key again.
 
 On supported Humble game bundle and Humble Choice pages, each Steam game title is matched against your owned games (by normalized title) and badged. Non-Steam Choice items, playtests, books, and software bundles are ignored.
-
-On bundle pages, expanded game titles link to exact Steam store pages when the cached Steam library includes a matching app ID. Unknown or ambiguous titles stay as plain text.
 
 ## Setup
 

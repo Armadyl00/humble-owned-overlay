@@ -67,26 +67,13 @@ async function refreshFromKey(apiKey, steamId) {
 
 function buildResult(games, fetchedAt) {
   const owned = [];
-  const appIdsByTitle = {};
-  const ambiguousTitles = new Set();
 
   for (const game of games) {
     const title = normalizeTitle(game.name || '');
     if (!title) continue;
 
     owned.push(title);
-
-    const appid = Number(game.appid);
-    if (!Number.isInteger(appid) || appid <= 0 || ambiguousTitles.has(title)) continue;
-
-    if (appIdsByTitle[title] && appIdsByTitle[title] !== appid) {
-      delete appIdsByTitle[title];
-      ambiguousTitles.add(title);
-      continue;
-    }
-
-    appIdsByTitle[title] = appid;
   }
 
-  return { owned, appIdsByTitle, fetchedAt };
+  return { owned, fetchedAt };
 }

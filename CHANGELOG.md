@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.4.5
+
+- Remove expanded bundle title Steam links because exact app links were not available consistently across Humble panels.
+
 ## v3.4.4
 
 - Remove experimental Humble Library and Purchases page badging until those account layouts can be revisited.
