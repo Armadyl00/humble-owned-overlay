@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.4.0
+
+- Add `Owned` badges to matching Steam games on Humble Library and Purchases pages.
+
 ## v3.3.9
 
 - Center the owned-games counter on the public Humble Choice membership page for signed-out and non-Choice users.

@@ -17,9 +17,19 @@
     return /^\/membership(?:\/|$)/.test(location.pathname);
   }
 
+  function isLibraryPage() {
+    return /^\/home\/library(?:\/|$)/.test(location.pathname);
+  }
+
+  function isPurchasesPage() {
+    return /^\/home\/purchases(?:\/|$)/.test(location.pathname);
+  }
+
   function getPageKind() {
     if (isChoicePage()) return 'choice';
     if (isBundlePage()) return 'bundle';
+    if (isLibraryPage()) return 'library';
+    if (isPurchasesPage()) return 'purchases';
     return null;
   }
 
@@ -52,6 +62,11 @@
     const pageKind = getPageKind();
     if (!pageKind) {
       cleanupOverlay();
+      return;
+    }
+
+    if (isAccountPageKind(pageKind)) {
+      tagAccountPage(pageKind);
       return;
     }
 
@@ -92,6 +107,10 @@
 
   function hasClaimedBadge(cardEl) {
     return /\bclaimed\b/i.test(cardEl.textContent || '');
+  }
+
+  function isAccountPageKind(pageKind) {
+    return pageKind === 'library' || pageKind === 'purchases';
   }
 
   // -- Bundle tile discovery ------------------------------------------------
@@ -174,6 +193,14 @@
     return true;
   }
 
+  function isLikelyAccountGameTitle(text) {
+    if (!isLikelyGameTitle(text)) return false;
+    if (/^(humble library|library|purchases|platform|sort|alphabetical|search)$/i.test(text)) return false;
+    if (/^(in library|download|redeem|gift|key|keys|order|claimed|unclaimed)$/i.test(text)) return false;
+    if (/^(windows|mac|linux|android|steam|gog|origin|uplay|epic games)$/i.test(text)) return false;
+    return true;
+  }
+
   // Walk up from the title until we find an ancestor that contains an <img>.
   // That's the visual game card; badge anchors there so it overlays the art.
   function findCardAncestor(el) {
@@ -181,6 +208,102 @@
     for (let i = 0; i < 10 && current; i++) {
       if (current.querySelector('img')) return current;
       current = current.parentElement;
+    }
+    return null;
+  }
+
+  // -- Account library/purchases discovery --------------------------------
+
+  function tagAccountPage(pageKind) {
+    document.getElementById('hbo-counter-row')?.remove();
+    document.getElementById('hbo-counter')?.remove();
+
+    for (const { titleEl, titleText } of findAccountTiles(pageKind)) {
+      if (!ownedSet.has(normalizeTitle(titleText))) continue;
+      if (findExistingInlineBadge(titleEl)) continue;
+
+      const badge = document.createElement('span');
+      badge.className = 'hbo-badge hbo-inline-badge';
+      badge.textContent = 'Owned';
+      titleEl.insertAdjacentElement('afterend', badge);
+    }
+  }
+
+  function findAccountTiles(pageKind) {
+    const scope = findAccountScope(pageKind);
+    const candidates = new Set();
+
+    scope.querySelectorAll(
+      'a, h2, h3, h4, ' +
+      '[class*="game-title"], [class*="game-name"], ' +
+      '[class*="product-title"], [class*="product-name"], ' +
+      '[class*="entity-title"], [class*="entity-name"], ' +
+      '[class*="item-title"], [class*="itemTitle"], ' +
+      '[class*="purchase-title"], [class*="human-name"]'
+    ).forEach(el => candidates.add(el));
+
+    const results = [];
+    const seenRows = new Set();
+
+    for (const titleEl of candidates) {
+      if (titleEl.closest('nav, header, footer, form, select, option, script, style, .hbo-badge')) continue;
+
+      const titleText = getAccountTitleText(titleEl);
+      if (!isLikelyAccountGameTitle(titleText)) continue;
+
+      const rowEl = findAccountRowAncestor(titleEl);
+      if (rowEl && seenRows.has(rowEl)) continue;
+      if (rowEl) seenRows.add(rowEl);
+
+      results.push({ titleEl, cardEl: rowEl || titleEl.parentElement || titleEl, titleText });
+    }
+
+    return results;
+  }
+
+  function findAccountScope(pageKind) {
+    const pageSelector = pageKind === 'library'
+      ? '.js-library-view, .library-view, [class*="library"]'
+      : '.js-purchases-view, .purchases-view, [class*="purchases"], [class*="purchase"]';
+
+    return document.querySelector(pageSelector) ||
+      document.querySelector('.base-main-wrapper, main, [role="main"]') ||
+      document.body;
+  }
+
+  function getAccountTitleText(el) {
+    const directText = Array.from(el.childNodes)
+      .filter(node => node.nodeType === Node.TEXT_NODE)
+      .map(node => node.textContent)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    return directText || normalizeElementText(el);
+  }
+
+  function findAccountRowAncestor(el) {
+    let current = el.parentElement;
+    for (let i = 0; i < 8 && current; i++) {
+      const text = normalizeElementText(current);
+      if (text.length > 0 && text.length <= 800 && current.matches(
+        'li, tr, [class*="row"], [class*="item"], [class*="game"], ' +
+        '[class*="product"], [class*="purchase"], [class*="library"]'
+      )) {
+        return current;
+      }
+      current = current.parentElement;
+    }
+
+    return el.parentElement;
+  }
+
+  function findExistingInlineBadge(titleEl) {
+    let current = titleEl.nextElementSibling;
+    while (current) {
+      if (current.classList?.contains('hbo-inline-badge')) return current;
+      if (normalizeElementText(current)) return null;
+      current = current.nextElementSibling;
     }
     return null;
   }
