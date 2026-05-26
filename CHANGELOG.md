@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.4.4
+
+- Remove experimental Humble Library and Purchases page badging until those account layouts can be revisited.
+
 ## v3.4.3
 
 - Fix Humble Library and Purchases badge detection on account list rows.
