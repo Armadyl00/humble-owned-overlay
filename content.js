@@ -2,6 +2,7 @@
   'use strict';
 
   let ownedSet = null;
+  let steamAppIdsByTitle = {};
   let mutationObserver = null;
   let debounceTimer = null;
   let lastUrl = location.href;
@@ -50,6 +51,7 @@
     }
 
     ownedSet = new Set(response.owned);
+    steamAppIdsByTitle = response.appIdsByTitle || {};
     tagPage();
     startMutationObserver();
   }
@@ -93,6 +95,7 @@
     }
 
     updateCounter(ownedCount, tiles.length, pageKind);
+    linkExpandedSteamTitles(pageKind);
   }
 
   function cleanupOverlay() {
@@ -592,6 +595,76 @@
     return `You own ${ownedCount} / ${total} ${noun} in ${context}`;
   }
 
+  // -- Exact Steam title links ---------------------------------------------
+
+  function linkExpandedSteamTitles(pageKind) {
+    if (pageKind !== 'bundle') return;
+
+    for (const panelEl of findExpandedGamePanels()) {
+      const titleEl = findExpandedPanelTitle(panelEl);
+      if (!titleEl || titleEl.querySelector('.hbo-steam-title-link')) continue;
+
+      const titleText = normalizeElementText(titleEl);
+      const appid = steamAppIdsByTitle[normalizeTitle(titleText)];
+      if (!appid) continue;
+
+      linkTitleElement(titleEl, titleText, appid);
+    }
+  }
+
+  function findExpandedGamePanels() {
+    const selector = [
+      '.dd-game-row-expanded',
+      '.dd-game-row-details',
+      '[class*="game-detail"]',
+      '[class*="GameDetail"]',
+      '[class*="expanded-game"]',
+      '[class*="expandedGame"]',
+      '[class*="details-view"]'
+    ].join(', ');
+
+    return Array.from(document.querySelectorAll(selector)).filter(el => {
+      const rect = el.getBoundingClientRect();
+      const text = normalizeElementText(el);
+      return rect.width > 0 && rect.height > 0 && text.length > 0 && text.length <= 2000;
+    });
+  }
+
+  function findExpandedPanelTitle(panelEl) {
+    const selectors = [
+      'h2',
+      'h3',
+      '[class*="game-title"]',
+      '[class*="game-name"]',
+      '[class*="product-title"]',
+      '[class*="entity-title"]'
+    ];
+
+    for (const selector of selectors) {
+      const title = Array.from(panelEl.querySelectorAll(selector)).find(el => {
+        if (el.closest('button, .hbo-badge')) return false;
+        const text = normalizeElementText(el);
+        return isLikelyGameTitle(text) && !el.querySelector('*');
+      });
+
+      if (title) return title;
+    }
+
+    return null;
+  }
+
+  function linkTitleElement(titleEl, titleText, appid) {
+    const link = document.createElement('a');
+    link.className = 'hbo-steam-title-link';
+    link.href = `https://store.steampowered.com/app/${appid}/`;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = titleText;
+
+    titleEl.textContent = '';
+    titleEl.appendChild(link);
+  }
+
   // -- MutationObserver (lazy tiles + SPA navigation) ----------------------
 
   function startMutationObserver() {
@@ -610,6 +683,7 @@
     if (location.href !== lastUrl) {
       lastUrl = location.href;
       ownedSet = null;
+      steamAppIdsByTitle = {};
       mutationObserver?.disconnect();
       cleanupOverlay();
       init();

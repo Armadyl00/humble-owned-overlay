@@ -70,3 +70,12 @@
 #hbo-counter.hbo-choice-counter {
   margin: 0;
 }
+
+.hbo-steam-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.hbo-steam-title-link:hover {
+  text-decoration: underline;
+}

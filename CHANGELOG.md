@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.4.2
+
+- Link expanded bundle game titles to exact Steam store pages when the cached Steam library includes an app ID.
+
 ## v3.4.1
 
 - Add a toolbar popup with library cache status and an options shortcut.
