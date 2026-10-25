@@ -41,6 +41,8 @@ On supported Humble game bundle and Humble Choice pages, game titles are compare
 
 For the published Chrome version, use the [Chrome Web Store listing](https://chromewebstore.google.com/detail/humble-bundle-owned-overl/bkbliccgapgfedaploklillhkmlailik).
 
+Browser packages are available from [GitHub Releases](https://github.com/Armadyl00/humble-owned-overlay/releases/latest). For local Chrome testing, extract the Chrome ZIP and load its folder as an unpacked extension.
+
 For a Chrome development checkout:
 
 1. Download the ZIP from this repo (Code → Download ZIP) — or `git clone`
@@ -48,9 +50,9 @@ For a Chrome development checkout:
 3. Chrome → `chrome://extensions` → enable **Developer mode** → **Load unpacked** → pick the folder
 4. Right-click the extension → **Options** → paste your Steam API key + SteamID64 → click **Fetch library**
 
-For Firefox development testing, first build the packages below. Open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**, and select `dist/firefox/manifest.json`. Temporary extensions disappear when Firefox restarts. The Firefox build uses MV3 background scripts and requires desktop Firefox 140 or later. Android has a declared minimum of 142 for data consent, but Android support has not been verified.
+For Firefox development testing, extract the Firefox release ZIP or build the packages below. Open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**, and select `manifest.json` from the extracted folder (`dist/firefox/manifest.json` for a source build). Temporary extensions disappear when Firefox restarts. The Firefox build requires desktop Firefox 140 or later. Android support has not been verified.
 
-A Firefox ZIP is unsigned and cannot be permanently installed into normal release Firefox until Mozilla signs it. There is no published Firefox listing yet. Use a separate test profile to compare development builds against the working Chrome version.
+A Firefox ZIP is unsigned and cannot be permanently installed into normal release Firefox until Mozilla signs it. Use a separate test profile to compare development builds against the working Chrome version.
 
 ## Development and packaging
 

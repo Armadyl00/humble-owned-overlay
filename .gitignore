@@ -1,3 +1,15 @@
 node_modules/
 dist/
 web-ext-artifacts/
+
+# Private local configuration, credentials, and browser test data.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.log
+local/
+browser-profiles/

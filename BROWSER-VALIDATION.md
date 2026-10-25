@@ -1,89 +1,49 @@
-# Local browser validation — 2026-10-25
+# Browser validation — v3.4.7
 
-The local v3.3.10 development build passed the checks below. The comparison baseline is unchanged Chrome v3.3.9 at repository commit `e60c203c05f603814acb3683f60ae64172f8fa5d`. Nothing has been submitted to a browser store.
+Checked on 2026-10-25. The current source passed 64 automated tests, both package validators, and Mozilla `web-ext` lint with zero errors, warnings, or notices. The user also confirmed successful testing with signed-in Humble pages and a real Steam library. That acceptance is separate from the synthetic-library browser checks below.
 
-## Icon update: v3.4.7
+## Browser checks
 
-The extension and action manifests now declare PNG icons at the appropriate sizes. The editable vector source and a librsvg rendering script are checked in; PNGs ship directly without adding a runtime dependency.
-
-- 64 automated tests passed; both package validators and Firefox lint passed without errors, warnings, or notices.
-- Native Chromium 156.0.8078.47 and Firefox 158.0.1 decoded every declared icon at its expected 16, 32, 48, 96, or 128 pixel size. The Chromium extensions page displayed the new icon correctly.
-- Background cache messaging passed in both browsers. Runtime JavaScript, HTML, CSS, and permissions are unchanged from the accepted v3.4.6 build.
-- Both ZIPs passed CRC checks and include all five PNG assets, for sixteen runtime/license files per browser.
-
-## Canary integration: v3.4.6
-
-The reviewed work was merged onto the existing v3.4.5 canary source as v3.4.6. The toolbar popup, its script, and its manifest declaration were preserved; the reverted account-page badges and expanded Steam links were not restored. The shared background/content/options scripts, CSS, and normalizer remain byte-identical to the tested v3.3.10 build. The manifest retains the canary popup declaration and advances the version.
-
-- 59 automated tests passed, including four new popup behavior and package-completeness regressions. Both browser builds passed validation; Firefox lint reported zero errors, warnings, and notices.
-- Native Chromium 156.0.8078.47 and Firefox 158.0.1 passed the live Choice/bundle count checks at desktop and narrow widths, failed-refresh recovery, and idle checks again. Chromium's stopped worker recovered through a cached read.
-- Both browsers also passed native fresh/cached popup checks, stale-badge removal, cache-change propagation, and final visual counter/badge checks.
-- Both runtime ZIPs contain eleven files, including the popup and its script, without development dependencies. Independent archive checks confirmed each package matches the merged source.
-- The earlier v3.3.10 Chrome test ZIP is retained under `test-builds/` for comparison. The current Chrome and unsigned Firefox v3.4.6 downloads are documented in `test-builds/README.md`.
-
-## Release acceptance
-
-The user confirmed successful testing with signed-in Humble pages and a real Steam library. This is user-reported acceptance, separate from the synthetic-library automation above.
-
-Fresh disposable Chromium 156.0.8078.47 and Firefox 158.0.1 profiles both returned `isOnToolbar: false` from their native action APIs. No extension code changes were needed for toolbar placement. Install/update handlers only scrub the legacy API key, and additional regression checks protect that behavior.
-
-The final suite passes 63 tests. Both validators and Firefox lint pass. Rebuilt Chrome and Firefox ZIPs are byte-identical to the v3.4.6 packages accepted by the user; the final changes affect documentation, tests, and release automation.
-
-GitHub publishes the versioned Chrome and unsigned Firefox packages after validation succeeds on `main`. Existing release tags/assets are preserved on subsequent pushes with the same version. This does not publish to either browser store.
-
-## Environment and method
-
-Tests ran on Ubuntu 24.04 ARM64 using native headless Chromium 156.0.8078.47 and Firefox 158.0.1, driven through their WebDriver implementations in disposable profiles. Chromium is not branded Google Chrome. Firefox loaded the unsigned build temporarily. These checks establish behavior in the tested browser versions; they do not establish behavior at the declared Firefox 140 minimum or on Android.
-
-Ownership caches contained synthetic Steam game records, never a user's Steam library or API key. Live tests loaded the public Humble pages below while signed out. Successful Steam responses were covered by the automated mocked-API tests, not by a real account import.
-
-## Completed checks
+Native headless Chromium 156.0.8078.47 and Firefox 158.0.1 ran on Ubuntu 24.04 ARM64 through WebDriver in disposable profiles. Chromium is not branded Google Chrome; Firefox loaded the unsigned build temporarily. Automated browser caches contained synthetic game records, never a user's library or API key.
 
 | Check | Chromium | Firefox |
 | --- | --- | --- |
-| Native extension loading, options initialization, and cached background messaging | Passed | Passed |
+| Extension loading, options initialization, and background cache messaging | Passed | Passed |
 | Public Choice: two owned games out of eight eligible Steam games | Passed | Passed |
-| Ordinary game bundle: two owned games out of eight | Passed | Passed |
-| Desktop width 1440 and narrow width 390 in Chromium / 500 in Firefox | Passed | Passed |
-| Single counter, repeated carousel cards decorated without increasing totals | Passed | Passed |
+| Ordinary bundle: two owned games out of eight | Passed | Passed |
+| Desktop width 1440 and narrow width 390 / 500, respectively | Passed | Passed |
+| One counter; repeated carousel cards decorated without inflating totals | Passed | Passed |
 | No overlay mutations during a 1.3-second idle sample on either live page | Passed | Passed |
-| Steam rejects a deliberately invalid test key with HTTP 401; controls recover, key clears, previous account/cache remain | Passed | Passed |
-| Stop the service worker, verify it disappears, then wake it through a cached library read | Passed | Not applicable to this Firefox background model |
-| Choice counter and visible owned badge actually paint unobscured at desktop and narrow widths, after dismissing the cookie banner | Passed | Passed |
-| Humble-origin synthetic fixture: stale badge removal and cache-change propagation | Automated DOM coverage | Native browser check passed |
+| Real HTTP 401 from an invalid test key: controls recover, key clears, previous account/cache remain | Passed | Passed |
+| Stopped service worker wakes through a cached library read | Passed | Not applicable to this Firefox background model |
+| Counter and owned badge paint unobscured at both widths after dismissing the cookie banner | Passed | Passed |
+| Stale-badge removal and cache-change propagation | Automated DOM coverage | Native fixture passed |
+| Fresh/cached toolbar popup and declared PNG icon decoding | Passed | Passed |
 
-The live pages were [public Choice](https://www.humblebundle.com/membership) and [Puzzlers to Puzzle You](https://www.humblebundle.com/games/puzzlers-to-puzzle-you). Choice showed ten public items; the expected total excluded IGN Plus and a playtest, leaving eight eligible Steam games. The bundle's charity entry was excluded from its eight-game total. These pages can change after this test date.
+The live pages were [public Choice](https://www.humblebundle.com/membership) and [Puzzlers to Puzzle You](https://www.humblebundle.com/games/puzzlers-to-puzzle-you). Choice's ten public items included IGN Plus and a playtest, leaving eight eligible Steam games. The ordinary bundle's charity entry was excluded. Page contents can change after the test date.
 
-The final visual run used a synthetic cache matching all eight eligible Choice games so the active card's badge could be inspected. Geometry checks were supplemented by native hit testing and screenshot inspection: a centered bounding box alone did not prove that the counter painted above Humble's carousel background.
+Visual checks combined native hit testing and screenshot inspection. A final synthetic cache matching all eight eligible Choice games made the active card's badge visible. The Chromium extensions page also displayed the v3.4.7 icon correctly.
 
-## Issues confirmed against v3.3.9 and fixed locally
+## Regression and package checks
 
-- Public Choice's desktop grid squeezed the counter into a 78-pixel column on the right. The counter now spans the grid and paints above the carousel background.
-- Narrow ordinary bundle pages could have an empty desktop tier container and a populated mobile container. The old build produced no badges or counter in this case; the development build selects the populated visible container and retags on resize.
-- Responsive/carousel copies need badges on each physical card while totals count each title once. Discovery and stale-badge cleanup now preserve this distinction.
-- On both tested live pages, the baseline generated 12 overlay mutations in a 1.3-second idle sample. The development build generated zero in the corresponding samples. This is a short observation of overlay mutations, not a general CPU benchmark.
+The automated suite covers duplicate cards, mobile containers, cache updates, malformed responses, timeouts, error cleanup, popup behavior, installation handlers, manifests, icons, and package completeness.
 
-The baseline's failed narrow-bundle assertion is evidence of the pre-existing issue; both development-build live-page runs passed.
+Both browser ZIPs passed archive/CRC checks and contain sixteen runtime/license files, including all five PNG icon sizes. Only the manifests differ between browsers; JavaScript, HTML, and CSS are shared. Neither ZIP includes Node packages or development dependencies. Runtime code and permissions are unchanged from the user-accepted v3.4.6 build; v3.4.7 adds the extension and toolbar icons.
 
-## Automated and package validation
+The earlier review compared Chrome v3.3.9 at `e60c203c05f603814acb3683f60ae64172f8fa5d`. It confirmed and fixed the narrow Choice counter, empty desktop containers hiding mobile bundle cards, duplicate-card counting, and repeated idle DOM writes. The baseline produced twelve overlay mutations in the same 1.3-second samples where the corrected build produced zero. This is a short observation, not a general CPU benchmark.
 
-- 55 automated tests passed, including duplicate-card, mobile-container, cache-update, malformed-response, timeout, error-cleanup, and browser-manifest regressions.
-- Both generated packages passed the project validator.
-- Mozilla `web-ext` 10.8.0 reported zero errors, warnings, and notices.
-- Runtime files are identical between browser ZIPs except for their manifests. Runtime packages contain no test framework or development dependencies.
-- The delivered patch applies to the baseline and reproduces the delivered source; both runtime ZIPs passed independent archive/CRC checks.
+Versioned browser ZIPs are kept in [GitHub Releases](https://github.com/Armadyl00/humble-owned-overlay/releases). CI validates pushes to `main` before publishing a new manifest version; subsequent pushes with the same version preserve its existing tag and assets. Browser-store submission is separate.
 
-## Remaining manual acceptance
+## Remaining manual coverage
 
-- Branded Google Chrome on a user's desktop, especially its actual unpacked/store installation and permission flow.
-- Detailed CLAIMED transitions, site dropdown stacking, and back/forward edge cases on authenticated pages beyond the user-reported signed-in acceptance.
-- Additional private/unavailable-library, actual disconnection, slow-request, and revoked-host-permission checks. Real-library import passed user acceptance; error variants have automated mocked coverage, and the real HTTP 401 path passed in both browsers.
+- Store-installed branded Chrome and Mozilla-signed Firefox, including installation permissions and Firefox data consent.
+- Detailed CLAIMED transitions, dropdown stacking, and back/forward edge cases beyond the user's signed-in acceptance.
+- Additional real private/unavailable-library, disconnection, slow-request, and revoked-host-permission cases. Error variants have mocked coverage, and the real HTTP 401 path passed in both browsers.
 - Browser restart persistence and Firefox background suspension/restart behavior.
-- A Mozilla-signed Firefox installation, data consent, installation permissions, and final submission metadata.
-- Firefox 140 and Android. Android support is not verified or advertised.
+- The declared Firefox 140 minimum and Android. Android support is not verified or advertised.
 
-The Firefox ZIP remains unsigned. See [FIREFOX.md](FIREFOX.md) for distribution requirements and [TESTING.md](TESTING.md) for the full acceptance checklist. Broader Unicode matching, mixed-layout Choice discovery, edition/DLC semantics, and non-Steam filtering for ordinary bundles remain outside this change.
+The release Firefox ZIP is unsigned. See [FIREFOX.md](FIREFOX.md) for signing requirements and [TESTING.md](TESTING.md) for the full acceptance checklist. Broader Unicode matching, edition/DLC semantics, and delivery-platform verification for ordinary bundles remain limitations.
 
 ## Development-tool dependency audit
 
-`npm audit` reports three high-severity dependency entries arising from one unpatched `node-forge` advisory through `web-ext` and its transitive Android tooling. The advisory lists no patched version: [GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv). No third-party Node package is shipped in either browser ZIP. The pinned validation tools are retained; npm's suggested major downgrade is not applied. This remains a development-tool maintenance follow-up, especially before using additional signing or Android tooling.
+`npm audit` reports three high-severity dependency entries from one unpatched `node-forge` advisory through `web-ext` and its transitive Android tooling: [GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv). The audit found no patched version. These dependencies are development tools and are absent from both browser ZIPs. Retain the pinned tools and review the advisory before additional signing or Android tooling; npm's suggested major downgrade has not been applied.
