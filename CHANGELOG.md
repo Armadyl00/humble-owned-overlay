@@ -1,5 +1,22 @@
 # Changelog
 
+## v3.4.6
+
+Canary build; not submitted to either browser store.
+
+Includes the reviewed reliability and Firefox work first tested locally as v3.3.10, while preserving the v3.4.5 canary toolbar popup.
+
+- Add separate Chrome and Firefox MV3 packages from the same runtime files.
+- Stop counter updates from repeatedly triggering DOM scans.
+- Keep the public Choice counter visible across Humble's full grid width and support the populated mobile bundle view.
+- Decorate responsive/carousel copies while counting each title only once.
+- Remove stale owned badges and adapt Choice badges when CLAIMED changes.
+- Update open Humble pages after a successful manual library refresh.
+- Preserve the previous library and account when a refresh fails, and reject malformed game records before caching them.
+- Add bounded Steam requests, structured errors, and reliable API-key input cleanup.
+- Prevent unrelated titles from matching through empty normalized names.
+- Add regression tests and browser-package validation to normal CI.
+
 ## v3.4.5
 
 - Remove expanded bundle title Steam links because exact app links were not available consistently across Humble panels.

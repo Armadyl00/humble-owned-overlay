@@ -9,18 +9,24 @@
 
   function scheduleBadgePositioning() {
     clearTimeout(debounceTimer);
+    if (!isChoicePage()) return;
     debounceTimer = setTimeout(positionChoiceOwnedBadges, 100);
   }
 
   function positionChoiceOwnedBadges() {
     if (!isChoicePage()) return;
 
-    document.querySelectorAll('.hbo-badge-below-claimed').forEach(badge => {
+    document.querySelectorAll('.hbo-badge').forEach(badge => {
       const cardEl = badge.parentElement;
       if (!cardEl) return;
 
       const claimedBadge = findClaimedBadge(cardEl);
-      if (!claimedBadge) return;
+      badge.classList.toggle('hbo-badge-below-claimed', !!claimedBadge);
+      if (!claimedBadge) {
+        badge.style.removeProperty('top');
+        badge.style.removeProperty('left');
+        return;
+      }
 
       const cardRect = cardEl.getBoundingClientRect();
       const claimedRect = claimedBadge.getBoundingClientRect();
@@ -29,8 +35,8 @@
       const top = Math.max(6, Math.round(claimedRect.bottom - cardRect.top + 4));
       const left = Math.max(6, Math.round(claimedRect.left - cardRect.left));
 
-      badge.style.top = `${top}px`;
-      badge.style.left = `${left}px`;
+      if (badge.style.top !== `${top}px`) badge.style.top = `${top}px`;
+      if (badge.style.left !== `${left}px`) badge.style.left = `${left}px`;
     });
   }
 
@@ -48,5 +54,7 @@
 
   scheduleBadgePositioning();
   window.addEventListener('resize', scheduleBadgePositioning);
-  new MutationObserver(scheduleBadgePositioning).observe(document.body, { childList: true, subtree: true });
+  new MutationObserver(scheduleBadgePositioning).observe(document, {
+    childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class']
+  });
 })();

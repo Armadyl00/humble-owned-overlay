@@ -1,17 +1,31 @@
-# Chrome v3.3.10 local test build
+# Canary browser test builds
 
-[Download the Chrome test ZIP](https://github.com/Armadyl00/humble-owned-overlay/raw/refs/heads/canary/test-builds/humble-owned-overlay-v3.3.10-chrome.zip)
+This branch contains the merged v3.4.6 source, preserving the existing v3.4.5 toolbar popup while adding the reviewed reliability fixes and Firefox build. The published Chrome Store baseline remains v3.3.9.
 
-Extract the ZIP, open `chrome://extensions`, enable **Developer mode**, and choose **Load unpacked**. Select the extracted directory containing `manifest.json`. A separate Chrome profile keeps the published v3.3.9 build available for comparison.
+- [Download Chrome v3.4.6](https://github.com/Armadyl00/humble-owned-overlay/raw/refs/heads/canary/test-builds/humble-owned-overlay-v3.4.6-chrome.zip)
+- [Download Firefox v3.4.6 — unsigned](https://github.com/Armadyl00/humble-owned-overlay/raw/refs/heads/canary/test-builds/humble-owned-overlay-v3.4.6-firefox.zip)
 
-This is the tested v3.3.10 development package built from the local review work based on commit `e60c203c05f603814acb3683f60ae64172f8fa5d`. This upload adds the packaged build and these instructions; the existing canary source files are preserved and are not the source of this ZIP.
+For Chrome, extract the ZIP, open `chrome://extensions`, enable **Developer mode**, and choose **Load unpacked**. Select the extracted directory containing `manifest.json`. A separate profile keeps the published build available for comparison. If updating an unpacked test installation, replace its files and reload the extension.
 
-Validation: 55 automated tests passed. Native Chromium 156.0.8078.47 and Firefox 158.0.1 passed public Humble Choice and ordinary bundle checks at desktop and narrow widths using synthetic ownership data. The build fixes counter visibility, mobile bundle discovery, repeated-card badges, idle observer updates, and refresh error recovery.
+For Firefox, extract the ZIP, open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**, and select the extracted `manifest.json`. Temporary add-ons disappear when Firefox restarts. Normal permanent installation needs Mozilla signing, which has not been performed.
 
-Branded desktop Chrome, authenticated Choice pages, a successful real Steam library import, and final installation/permission checks still need manual acceptance. This package has not been submitted to the Chrome Web Store.
+59 automated tests passed. Both browser builds passed validation, and Firefox lint returned zero errors, warnings, and notices. Native Chromium and Firefox passed public Humble page checks using synthetic ownership data; successful real-account Steam import and authenticated Choice acceptance remain manual checks. See [browser validation](../BROWSER-VALIDATION.md), [the acceptance checklist](../TESTING.md), and [Firefox distribution notes](../FIREFOX.md).
+
+To reproduce these packages, use compatible Node 22.22.2+ and run:
+
+```sh
+npm ci --ignore-scripts
+npm test
+npm run validate
+npm run build:zip
+npm run lint:firefox
+```
 
 SHA-256:
 
 ```text
-e1d18d018d3f97ac713195f503399640277f3fe83c9bacc24a8e463d01c768d8  humble-owned-overlay-v3.3.10-chrome.zip
+fc9274cef6329927a6ae11962ca38a5c3aa381f0c3021ef29776622fddc7084c  humble-owned-overlay-v3.4.6-chrome.zip
+e087a2b8055bbff1299d3977d1cc7fe1b830643eec2eed1fac7b58b350a999a4  humble-owned-overlay-v3.4.6-firefox.zip
 ```
+
+The earlier [Chrome v3.3.10 local test ZIP](humble-owned-overlay-v3.3.10-chrome.zip) is retained for comparison. Its source was based on commit `e60c203c05f603814acb3683f60ae64172f8fa5d` before integration with the existing canary popup.

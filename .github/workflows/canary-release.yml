@@ -22,7 +22,11 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: npm
+
+      - name: Install development tools
+        run: npm ci --ignore-scripts
 
       - name: Run tests
         run: npm test
@@ -40,18 +44,21 @@ jobs:
         env:
           GITHUB_SHA: ${{ github.sha }}
 
+      - name: Validate Firefox package
+        run: npm run lint:firefox
+
       - name: Verify release asset
-        run: test "$(find dist -maxdepth 1 -name '*.zip' | wc -l)" -eq 1
+        run: test "$(find dist -maxdepth 1 -name '*.zip' | wc -l)" -eq 2
 
       - name: Publish prerelease
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          asset="$(ls dist/*.zip)"
+          assets=(dist/*.zip)
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG" --notes-file release-notes.md --prerelease
-            gh release upload "$RELEASE_TAG" "$asset" --clobber
+            gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber
           else
-            gh release create "$RELEASE_TAG" "$asset" --title "$RELEASE_TAG" --notes-file release-notes.md --prerelease --target "$GITHUB_SHA"
+            gh release create "$RELEASE_TAG" "${assets[@]}" --title "$RELEASE_TAG" --notes-file release-notes.md --prerelease --target "$GITHUB_SHA"
           fi

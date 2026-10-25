@@ -196,14 +196,14 @@
       <button id="refresh-btn" type="button">Fetch library</button>
     </div>
 
-    <div id="status"></div>
+    <div id="status" role="status" aria-live="polite" aria-atomic="true"></div>
     <p class="cache-info" id="cache-info"></p>
 
     <div class="security-note">
-      <strong>Security:</strong> Your API key never touches the disk. It's sent
-      once to Steam over HTTPS, the game list comes back, and the key is wiped
-      from memory and from this input field. Only the game names are saved
-      locally (in <code>chrome.storage.local</code>). No automatic refreshes —
+      <strong>Security:</strong> The extension does not save your API key. It is sent
+      to Steam over HTTPS when you fetch your library, and this input is cleared
+      after the attempt. Your SteamID64, returned game records, and refresh time are saved
+      locally in your browser. No automatic refreshes —
       click <em>Fetch library</em> whenever you buy new games.
     </div>
   </div>

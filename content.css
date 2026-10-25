@@ -33,6 +33,8 @@
 }
 
 #hbo-counter-row.hbo-public-choice-counter-row {
+  grid-column: 1 / -1;
+  z-index: 1;
   max-width: min(1020px, calc(100vw - 32px));
   margin: 12px auto 18px;
   text-align: center !important;

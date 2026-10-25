@@ -5,6 +5,8 @@
   let mutationObserver = null;
   let debounceTimer = null;
   let lastUrl = location.href;
+  let initVersion = 0;
+  let observedBody = null;
 
   // Game bundle pages have a slug after /games, e.g. /games/some-bundle-slug.
   // Listing pages (/games) and non-game bundle categories (/books, /software)
@@ -24,13 +26,22 @@
   }
 
   async function init() {
+    const version = ++initVersion;
+    const url = location.href;
     const pageKind = getPageKind();
     if (!pageKind) {
       cleanupOverlay();
       return;
     }
 
-    const response = await chrome.runtime.sendMessage({ type: 'getOwnedSet' });
+    let response;
+    try {
+      response = await chrome.runtime.sendMessage({ type: 'getOwnedSet' });
+    } catch {
+      console.warn('[Humble Owned Overlay] Could not load the saved Steam library. Try reloading the extension.');
+      return;
+    }
+    if (version !== initVersion || location.href !== url) return;
 
     if (!response || response.error === 'not_configured') return;
 
@@ -39,7 +50,8 @@
       return;
     }
 
-    ownedSet = new Set(response.owned);
+    if (!Array.isArray(response.owned)) return;
+    ownedSet = new Set(response.owned.filter(title => typeof title === 'string' && title));
     tagPage();
     startMutationObserver();
   }
@@ -56,12 +68,16 @@
     }
 
     const tiles = pageKind === 'choice' ? findChoiceTiles() : findBundleTiles();
-    let ownedCount = 0;
+    const titles = new Set();
+    const ownedTitles = new Set();
+    const ownedCards = new Set();
 
     for (const { cardEl, titleText } of tiles) {
+      titles.add(titleText);
       const norm = normalizeTitle(titleText);
-      if (ownedSet.has(norm)) {
-        ownedCount++;
+      if (norm && ownedSet.has(norm)) {
+        ownedTitles.add(titleText);
+        ownedCards.add(cardEl);
         if (!cardEl.querySelector('.hbo-badge')) {
           const badge = document.createElement('span');
           badge.className = pageKind === 'choice' && hasClaimedBadge(cardEl)
@@ -74,10 +90,17 @@
           const pos = getComputedStyle(cardEl).position;
           if (pos === 'static') cardEl.style.position = 'relative';
         }
+        cardEl.querySelector('.hbo-badge').classList.toggle(
+          'hbo-badge-below-claimed', pageKind === 'choice' && hasClaimedBadge(cardEl)
+        );
       }
     }
 
-    updateCounter(ownedCount, tiles.length, pageKind);
+    document.querySelectorAll('.hbo-badge').forEach(badge => {
+      if (!ownedCards.has(badge.parentElement)) badge.remove();
+    });
+
+    updateCounter(ownedTitles.size, titles.size, pageKind);
   }
 
   function cleanupOverlay() {
@@ -112,8 +135,9 @@
   function findBundleTiles() {
     // Prefer scoping to the bundle's tier view when present; fall back to the
     // whole document for legacy layouts that don't expose that container.
-    const scope =
-      document.querySelector('.js-desktop-tiers-view') ||
+    const scopes = [document.querySelector('.js-desktop-tiers-view'), document.querySelector('.js-mobile-tiers-view')]
+      .filter(el => el?.childElementCount);
+    const scope = scopes.find(el => el.getClientRects().length) || scopes[0] ||
       document.querySelector('.bundle-page') ||
       document;
 
@@ -137,7 +161,7 @@
     scope.querySelectorAll('.dd-image-box-caption').forEach(el => candidates.add(el));
 
     const results = [];
-    const seen = new Set();
+    const seen = new Map();
 
     for (const titleEl of candidates) {
       // Defence-in-depth: if scope is the whole document (fallback), drop
@@ -146,12 +170,12 @@
 
       const text = (titleEl.textContent || '').trim();
       if (!isLikelyGameTitle(text)) continue;
-      if (seen.has(text)) continue;
-
       const cardEl = findCardAncestor(titleEl);
       if (!cardEl) continue;
+      if (seen.get(cardEl)?.has(text)) continue;
 
-      seen.add(text);
+      if (!seen.has(cardEl)) seen.set(cardEl, new Set());
+      seen.get(cardEl).add(text);
       results.push({ titleEl, cardEl, titleText: text });
     }
 
@@ -160,7 +184,7 @@
 
   function isLikelyGameTitle(text) {
     if (!text || text.length < 2 || text.length > 100) return false;
-    if (/^\d+%\b/.test(text)) return false;             // "94% Positive on Steam"
+    if (/^\d+%(?:\s|$)/.test(text)) return false;       // "94% Positive on Steam"
     if (/^steam deck\b/i.test(text)) return false;      // "Steam Deck Playable"
     if (/^steam$/i.test(text)) return false;
     if (/^claimed$/i.test(text)) return false;
@@ -201,14 +225,13 @@
       if (!isTrackableChoiceItem(choice)) return;
 
       const titleText = choice.title.trim();
-      if (seen.has(titleText)) return;
-
       const cardEl =
         slide.querySelector('.main-image-wrapper') ||
         slide.querySelector('img')?.parentElement ||
         slide;
 
-      seen.add(titleText);
+      if (seen.has(cardEl)) return;
+      seen.add(cardEl);
       results.push({ titleEl: dataEl, cardEl, titleText });
     });
 
@@ -225,9 +248,9 @@
       if (!cardEl) return;
 
       const titleText = findChoiceCardTitle(cardEl);
-      if (!titleText || seen.has(titleText)) return;
+      if (!titleText || seen.has(cardEl)) return;
 
-      seen.add(titleText);
+      seen.add(cardEl);
       results.push({ titleEl: steamEl, cardEl, titleText });
     });
 
@@ -282,7 +305,7 @@
   }
 
   function isTrackableChoiceItem(choice) {
-    if (!choice?.title || !choice.image) return false;
+    if (typeof choice?.title !== 'string' || !choice.title.trim() || !choice.image) return false;
     if (/\bplaytest\b/i.test(choice.title)) return false;
 
     const deliveryMethods = Array.isArray(choice.delivery_methods) ? choice.delivery_methods : [];
@@ -313,7 +336,8 @@
       placeBundleCounter(counter);
     }
 
-    counter.textContent = buildCounterLabel(ownedCount, total, pageKind);
+    const label = buildCounterLabel(ownedCount, total, pageKind);
+    if (counter.textContent !== label) counter.textContent = label;
   }
 
   function placeChoiceCounter(counter) {
@@ -329,9 +353,9 @@
     row.classList.toggle('hbo-public-choice-counter-row', placement?.kind === 'public-choice-games');
 
     if (placement) {
-      placement.element.insertAdjacentElement(placement.position, row);
+      placeAdjacent(placement.element, placement.position, row);
     } else {
-      document.body.prepend(row);
+      if (document.body.firstElementChild !== row) document.body.prepend(row);
     }
   }
 
@@ -340,10 +364,15 @@
 
     const anchor = findCounterAnchor('bundle');
     if (anchor) {
-      anchor.insertAdjacentElement('afterend', counter);
+      placeAdjacent(anchor, 'afterend', counter);
     } else {
-      document.body.prepend(counter);
+      if (document.body.firstElementChild !== counter) document.body.prepend(counter);
     }
+  }
+
+  function placeAdjacent(anchor, position, element) {
+    const sibling = position === 'beforebegin' ? anchor.previousElementSibling : anchor.nextElementSibling;
+    if (sibling !== element) anchor.insertAdjacentElement(position, element);
   }
 
   function findChoiceCounterPlacement() {
@@ -474,24 +503,52 @@
   function startMutationObserver() {
     if (mutationObserver) mutationObserver.disconnect();
 
-    mutationObserver = new MutationObserver(() => {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(tagPage, 300);
+    mutationObserver = new MutationObserver(records => {
+      if (records.every(isOverlayMutation)) return;
+      scheduleTagging();
     });
 
-    mutationObserver.observe(document.body, { childList: true, subtree: true });
+    observedBody = document.body;
+    mutationObserver.observe(observedBody, { childList: true, subtree: true, characterData: true });
   }
 
-  // SPA URL change watcher (separate observer on document so it survives body replacement).
-  new MutationObserver(() => {
-    if (location.href !== lastUrl) {
+  function scheduleTagging() {
+    if (!ownedSet || !getPageKind()) return;
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(tagPage, 300);
+  }
+
+  function isOverlayMutation(record) {
+    const selector = '.hbo-badge, #hbo-counter, #hbo-counter-row';
+    const target = record.target.nodeType === 1 ? record.target : record.target.parentElement;
+    if (target?.closest(selector)) return true;
+    const nodes = [...record.addedNodes, ...record.removedNodes];
+    return nodes.length > 0 && nodes.every(node => node.nodeType === 1 && node.matches(selector));
+  }
+
+  function reloadLibrary() {
+    ownedSet = null;
+    clearTimeout(debounceTimer);
+    mutationObserver?.disconnect();
+    observedBody = null;
+    cleanupOverlay();
+    init();
+  }
+
+  function checkNavigation() {
+    if (location.href !== lastUrl || (observedBody && observedBody !== document.body)) {
       lastUrl = location.href;
-      ownedSet = null;
-      mutationObserver?.disconnect();
-      cleanupOverlay();
-      init();
+      reloadLibrary();
     }
-  }).observe(document, { subtree: true, childList: true });
+  }
+
+  // Watch the document so navigation still works when Humble replaces the body.
+  new MutationObserver(checkNavigation).observe(document, { subtree: true, childList: true });
+  window.addEventListener('popstate', checkNavigation);
+  window.addEventListener('resize', scheduleTagging);
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && Object.hasOwn(changes, 'ownedGamesCache')) reloadLibrary();
+  });
 
   init();
 })();

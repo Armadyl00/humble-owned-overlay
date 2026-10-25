@@ -1,15 +1,22 @@
 {
   "name": "humble-owned-overlay",
-  "version": "3.4.5",
+  "version": "3.4.6",
   "private": true,
-  "description": "Release tooling for the Humble Bundle Owned Overlay Chrome extension.",
+  "description": "Development and release tooling for the Humble Bundle Owned Overlay browser extension.",
   "type": "module",
   "scripts": {
-    "test": "node --test",
+    "test": "node --test test/*.test.mjs",
     "validate": "node scripts/validate-extension.mjs",
-    "build:zip": "node scripts/build-release.mjs"
+    "build:zip": "node scripts/build-release.mjs",
+    "build:chrome": "node scripts/build-release.mjs chrome",
+    "build:firefox": "node scripts/build-release.mjs firefox",
+    "lint:firefox": "web-ext lint --source-dir dist/firefox --warnings-as-errors"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.22.2"
+  },
+  "devDependencies": {
+    "jsdom": "30.1.3",
+    "web-ext": "10.8.0"
   }
 }

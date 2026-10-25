@@ -10,14 +10,33 @@ const EXPECTED_HOST_PERMISSIONS = [
 const EXPECTED_CONTENT_MATCHES = ['https://www.humblebundle.com/*'];
 const EXPECTED_ACTION_TITLE = 'Open Humble Bundle Owned Overlay options';
 
-export function validateExtension(root = process.cwd()) {
+export function createBrowserManifest(manifest, browser) {
+  assert(browser === 'chrome' || browser === 'firefox', `Unknown browser: ${browser}`);
+  const result = structuredClone(manifest);
+  if (browser === 'firefox') {
+    result.background = { scripts: ['lib/normalize.js', 'background.js'] };
+    result.browser_specific_settings = {
+      gecko: {
+        id: 'humble-owned-overlay@armadyl.work',
+        strict_min_version: '140.0',
+        data_collection_permissions: { required: ['authenticationInfo', 'personallyIdentifyingInfo'] }
+      },
+      gecko_android: { strict_min_version: '142.0' }
+    };
+  }
+  return result;
+}
+
+export function validateExtension(root = process.cwd(), { browser = 'chrome', manifest = readJson(root, 'manifest.json') } = {}) {
   const releaseFiles = new Set(['manifest.json', 'LICENSE']);
-  const manifest = readJson(root, 'manifest.json');
 
   assert(manifest.manifest_version === 3, 'manifest_version must be 3');
   assert(typeof manifest.name === 'string' && manifest.name.trim(), 'manifest name is required');
   assert(/^\d+\.\d+\.\d+$/.test(manifest.version || ''), 'manifest version must be x.y.z');
   assert(typeof manifest.description === 'string' && manifest.description.trim(), 'manifest description is required');
+  if (fs.existsSync(path.join(root, 'package.json'))) {
+    assert(readJson(root, 'package.json').version === manifest.version, 'package and manifest versions must match');
+  }
   assertSameMembers('permissions', manifest.permissions, EXPECTED_PERMISSIONS);
   assertSameMembers('host_permissions', manifest.host_permissions, EXPECTED_HOST_PERMISSIONS);
   assert(manifest.action?.default_title === EXPECTED_ACTION_TITLE, `action.default_title must be: ${EXPECTED_ACTION_TITLE}`);
@@ -29,11 +48,31 @@ export function validateExtension(root = process.cwd()) {
     collectHtmlScripts(root, popupPage).forEach(file => releaseFiles.add(file));
   }
 
-  const background = manifest.background?.service_worker;
-  assert(typeof background === 'string' && background.endsWith('.js'), 'background.service_worker must be a JS file');
-  assertFile(root, background, 'background service worker');
-  releaseFiles.add(background);
-  collectImportScripts(root, background).forEach(file => releaseFiles.add(file));
+  let backgrounds;
+  if (browser === 'firefox') {
+    assert(!manifest.background?.service_worker, 'Firefox must not declare background.service_worker');
+    assert(JSON.stringify(manifest.background?.scripts) === JSON.stringify(['lib/normalize.js', 'background.js']),
+      'Firefox background.scripts must load lib/normalize.js before background.js');
+    const gecko = manifest.browser_specific_settings?.gecko;
+    assert(gecko?.id === 'humble-owned-overlay@armadyl.work', 'Firefox extension ID must remain stable');
+    assert(gecko?.strict_min_version === '140.0', 'Firefox minimum version must be 140.0');
+    assert(manifest.browser_specific_settings.gecko_android?.strict_min_version === '142.0',
+      'Firefox Android minimum version must be 142.0 for built-in data consent');
+    assertSameMembers('Firefox data collection permissions', gecko?.data_collection_permissions?.required,
+      ['authenticationInfo', 'personallyIdentifyingInfo']);
+    backgrounds = manifest.background.scripts;
+  } else {
+    assert(browser === 'chrome', `Unknown browser: ${browser}`);
+    const background = manifest.background?.service_worker;
+    assert(typeof background === 'string' && background.endsWith('.js'), 'background.service_worker must be a JS file');
+    assert(!manifest.background.scripts && !manifest.browser_specific_settings, 'Chrome manifest must not contain Firefox-specific keys');
+    backgrounds = [background];
+  }
+  for (const background of backgrounds) {
+    assertFile(root, background, `background script ${background}`);
+    releaseFiles.add(background);
+    collectImportScripts(root, background).forEach(file => releaseFiles.add(file));
+  }
 
   assert(Array.isArray(manifest.content_scripts) && manifest.content_scripts.length > 0, 'content_scripts must not be empty');
   for (const [index, script] of manifest.content_scripts.entries()) {
@@ -131,9 +170,14 @@ function assert(condition, message) {
 
 if (import.meta.url === pathToFileURL(fileURLToPath(import.meta.url)).href && process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
-    const { manifest, releaseFiles } = validateExtension();
-    console.log(`Validated ${manifest.name} v${manifest.version}`);
-    console.log(`Release files: ${releaseFiles.join(', ')}`);
+    const sourceManifest = readJson(process.cwd(), 'manifest.json');
+    for (const browser of ['chrome', 'firefox']) {
+      const { manifest, releaseFiles } = validateExtension(process.cwd(), {
+        browser, manifest: createBrowserManifest(sourceManifest, browser)
+      });
+      console.log(`Validated ${browser}: ${manifest.name} v${manifest.version}`);
+      console.log(`Release files: ${releaseFiles.join(', ')}`);
+    }
   } catch (error) {
     console.error(error.message);
     process.exitCode = 1;
