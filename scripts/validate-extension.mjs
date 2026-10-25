@@ -40,6 +40,14 @@ export function validateExtension(root = process.cwd(), { browser = 'chrome', ma
   assertSameMembers('permissions', manifest.permissions, EXPECTED_PERMISSIONS);
   assertSameMembers('host_permissions', manifest.host_permissions, EXPECTED_HOST_PERMISSIONS);
   assert(manifest.action?.default_title === EXPECTED_ACTION_TITLE, `action.default_title must be: ${EXPECTED_ACTION_TITLE}`);
+  for (const [label, icons] of [['icons', manifest.icons], ['action.default_icon', manifest.action?.default_icon]]) {
+    if (icons === undefined) continue;
+    assert(icons && (typeof icons === 'object' || typeof icons === 'string'), `${label} must declare icon files`);
+    for (const file of typeof icons === 'string' ? [icons] : Object.values(icons)) {
+      assertFile(root, file, `${label} file ${file}`);
+      releaseFiles.add(file);
+    }
+  }
   if (manifest.action?.default_popup) {
     const popupPage = manifest.action.default_popup;
     assert(typeof popupPage === 'string' && popupPage.endsWith('.html'), 'action.default_popup must be an HTML file');

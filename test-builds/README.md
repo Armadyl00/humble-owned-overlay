@@ -1,6 +1,6 @@
-# Canary browser test builds
+# Archived canary browser test builds
 
-This branch contains the merged v3.4.6 source, preserving the existing v3.4.5 toolbar popup while adding the reviewed reliability fixes and Firefox build. The published Chrome Store baseline remains v3.3.9.
+Current packages are available from [GitHub Releases](https://github.com/Armadyl00/humble-owned-overlay/releases/latest). The retained v3.4.6 packages below predate the v3.4.7 icon update.
 
 - [Download Chrome v3.4.6](https://github.com/Armadyl00/humble-owned-overlay/raw/refs/heads/canary/test-builds/humble-owned-overlay-v3.4.6-chrome.zip)
 - [Download Firefox v3.4.6 — unsigned](https://github.com/Armadyl00/humble-owned-overlay/raw/refs/heads/canary/test-builds/humble-owned-overlay-v3.4.6-firefox.zip)

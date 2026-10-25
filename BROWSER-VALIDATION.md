@@ -2,6 +2,15 @@
 
 The local v3.3.10 development build passed the checks below. The comparison baseline is unchanged Chrome v3.3.9 at repository commit `e60c203c05f603814acb3683f60ae64172f8fa5d`. Nothing has been submitted to a browser store.
 
+## Icon update: v3.4.7
+
+The extension and action manifests now declare PNG icons at the appropriate sizes. The editable vector source and a librsvg rendering script are checked in; PNGs ship directly without adding a runtime dependency.
+
+- 64 automated tests passed; both package validators and Firefox lint passed without errors, warnings, or notices.
+- Native Chromium 156.0.8078.47 and Firefox 158.0.1 decoded every declared icon at its expected 16, 32, 48, 96, or 128 pixel size. The Chromium extensions page displayed the new icon correctly.
+- Background cache messaging passed in both browsers. Runtime JavaScript, HTML, CSS, and permissions are unchanged from the accepted v3.4.6 build.
+- Both ZIPs passed CRC checks and include all five PNG assets, for sixteen runtime/license files per browser.
+
 ## Canary integration: v3.4.6
 
 The reviewed work was merged onto the existing v3.4.5 canary source as v3.4.6. The toolbar popup, its script, and its manifest declaration were preserved; the reverted account-page badges and expanded Steam links were not restored. The shared background/content/options scripts, CSS, and normalizer remain byte-identical to the tested v3.3.10 build. The manifest retains the canary popup declaration and advances the version.

@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.4.7
+
+- Add a gamepad and ownership-check icon for the extensions page, toolbar, and installation screens in Chrome and Firefox.
+- Include declared icon files in browser packages and validate them before release.
+
 ## v3.4.6
 
 Chrome and Firefox release; browser-store submissions are separate.

@@ -15,6 +15,11 @@ test('validates the current extension manifest', () => {
     'content-choice-badges.js',
     'content.css',
     'content.js',
+    'icons/icon-128.png',
+    'icons/icon-16.png',
+    'icons/icon-32.png',
+    'icons/icon-48.png',
+    'icons/icon-96.png',
     'lib/normalize.js',
     'manifest.json',
     'options.html',
@@ -29,6 +34,23 @@ test('fails when a referenced content script is missing', t => {
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   fs.rmSync(path.join(root, 'content.js'));
   assert.throws(() => validateExtension(root), /content script JS content\.js is missing/);
+});
+
+test('both browser packages require their declared extension and toolbar icons', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hbo-icons-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const { releaseFiles, manifest } = validateExtension();
+  for (const file of releaseFiles) {
+    fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
+    fs.copyFileSync(file, path.join(root, file));
+  }
+  for (const icon of ['icons/icon-128.png', 'icons/icon-16.png']) {
+    fs.rmSync(path.join(root, icon));
+    for (const browser of ['chrome', 'firefox']) {
+      assert.throws(() => validateExtension(root, { browser, manifest: createBrowserManifest(manifest, browser) }), /icons.*is missing/);
+    }
+    fs.copyFileSync(icon, path.join(root, icon));
+  }
 });
 
 test('toolbar popup and its script are required when declared in either browser', t => {

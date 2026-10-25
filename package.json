@@ -1,6 +1,6 @@
 {
   "name": "humble-owned-overlay",
-  "version": "3.4.6",
+  "version": "3.4.7",
   "private": true,
   "description": "Development and release tooling for the Humble Bundle Owned Overlay browser extension.",
   "type": "module",

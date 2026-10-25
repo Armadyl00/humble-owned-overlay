@@ -2,7 +2,7 @@
 
 A personal browser extension that shows which games in a Humble Bundle you already own on Steam.
 
-The published Chrome baseline is v3.3.9. This checkout contains v3.4.6 with Firefox support, reliability fixes, and the toolbar cache-status popup. Automated checks, native browser tests, and user testing with signed-in Humble pages and a real Steam library have passed. Store submission and Mozilla signing are pending; see [BROWSER-VALIDATION.md](BROWSER-VALIDATION.md) for the tested scope.
+The reviewed Chrome baseline is v3.3.9. This checkout contains v3.4.7 with Firefox support, reliability fixes, a toolbar cache-status popup, and extension icons. Automated checks, native browser tests, and user testing with signed-in Humble pages and a real Steam library have passed. See [BROWSER-VALIDATION.md](BROWSER-VALIDATION.md) for the tested scope.
 
 > **Disclaimer:** This extension was built collaboratively with [Claude](https://claude.com) for personal use and learning. I am not a software engineer. The code is published as-is — review it yourself before installing.
 
@@ -66,9 +66,11 @@ npm run lint:firefox
 
 `build:zip` produces unpacked directories at `dist/chrome` and `dist/firefox`, plus a separately named ZIP for each browser. `npm run build:chrome` and `npm run build:firefox` rebuild one browser without deleting the other. Only the generated manifests differ between browsers; all runtime JavaScript, HTML, and CSS is shared. The root manifest remains the Chrome source manifest.
 
-To name a canary package, set `RELEASE_TAG=v3.4.6-canary.1` in your shell before building. GitHub tag builds validate that the tag agrees with the manifest version. A GitHub canary label does not create a distinct installable manifest version or a Mozilla-signed package.
+To name a canary package, set `RELEASE_TAG=v3.4.7-canary.1` in your shell before building. GitHub tag builds validate that the tag agrees with the manifest version. A GitHub canary label does not create a distinct installable manifest version or a Mozilla-signed package.
 
 Successful CI on `main` publishes the current version's Chrome and Firefox ZIPs as a GitHub release. Existing releases are left unchanged. Browser-store submission is separate.
+
+Icon PNGs are checked in. To regenerate them after editing `icons/icon.svg`, run `bash scripts/render-icons.sh` with librsvg's `rsvg-convert` installed. Normal builds do not require this tool.
 
 See [TESTING.md](TESTING.md) for browser acceptance checks. See [FIREFOX.md](FIREFOX.md) for signing and submission requirements.
 
@@ -99,6 +101,7 @@ manifest.json       # MV3 manifest, minimal permissions
 background.js       # service worker — Steam API fetch + cache
 content.js          # runs on humblebundle.com — DOM scan + badging
 content.css         # badge + counter styling
+icons/              # vector source and PNG extension icons
 popup.html/.js      # toolbar cache-status popup
 options.html/.js    # settings page
 lib/normalize.js    # title-normalization helper (edition suffixes, etc.)
