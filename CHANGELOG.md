@@ -2,7 +2,9 @@
 
 ## v3.4.6
 
-Canary build; not submitted to either browser store.
+Chrome and Firefox release; browser-store submissions are separate.
+
+The Firefox package is unsigned and uses temporary installation until Mozilla signs it.
 
 Includes the reviewed reliability and Firefox work first tested locally as v3.3.10, while preserving the v3.4.5 canary toolbar popup.
 

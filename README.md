@@ -2,7 +2,7 @@
 
 A personal browser extension that shows which games in a Humble Bundle you already own on Steam.
 
-The published Chrome baseline is v3.3.9. The canary build preserves the existing toolbar cache-status popup. This canary checkout contains v3.4.6 development changes and a Firefox build awaiting final manual acceptance and Mozilla signing. Native Chromium and Firefox checks on public Humble pages have passed; see [BROWSER-VALIDATION.md](BROWSER-VALIDATION.md) for the tested scope and remaining checks.
+The published Chrome baseline is v3.3.9. This checkout contains v3.4.6 with Firefox support, reliability fixes, and the toolbar cache-status popup. Automated checks, native browser tests, and user testing with signed-in Humble pages and a real Steam library have passed. Store submission and Mozilla signing are pending; see [BROWSER-VALIDATION.md](BROWSER-VALIDATION.md) for the tested scope.
 
 > **Disclaimer:** This extension was built collaboratively with [Claude](https://claude.com) for personal use and learning. I am not a software engineer. The code is published as-is — review it yourself before installing.
 
@@ -27,7 +27,7 @@ The published Chrome baseline is v3.3.9. The canary build preserves the existing
 
 ## How it works
 
-You set up a Steam Web API key + SteamID64 once. On the extension's options page, paste those and click **Fetch library** — the extension fetches your owned games from Steam, stores **only the game list** locally, and immediately discards the API key. Next time you want to refresh (after buying new games), you paste the key again.
+On the extension's options page, enter your SteamID64, paste your Steam Web API key, and click **Fetch library**. The extension caches the returned game records, SteamID64, and refresh time locally without saving the API key. To refresh after buying games, paste the key again.
 
 On supported Humble game bundle and Humble Choice pages, game titles are compared with your cached Steam library and matches are badged. Non-Steam Choice items, playtests, books, and software bundles are ignored. Title matching does not guarantee ownership of a particular edition, remaster, or its DLC. Non-Latin names that normalize to an empty value are skipped. Free games are excluded by the current Steam request's default settings. Ordinary bundle discovery does not verify each item's delivery platform.
 
@@ -68,6 +68,8 @@ npm run lint:firefox
 
 To name a canary package, set `RELEASE_TAG=v3.4.6-canary.1` in your shell before building. GitHub tag builds validate that the tag agrees with the manifest version. A GitHub canary label does not create a distinct installable manifest version or a Mozilla-signed package.
 
+Successful CI on `main` publishes the current version's Chrome and Firefox ZIPs as a GitHub release. Existing releases are left unchanged. Browser-store submission is separate.
+
 See [TESTING.md](TESTING.md) for browser acceptance checks. See [FIREFOX.md](FIREFOX.md) for signing and submission requirements.
 
 ## Use
@@ -76,7 +78,7 @@ After the initial fetch, open any supported Humble game bundle or Humble Choice 
 
 Whenever you want to refresh (e.g. after buying new games), open the extension options, paste the key, click **Fetch library**.
 
-Click the pinned toolbar icon to check how many games are cached and when the library was last refreshed.
+Open the extension's popup to check how many games are cached and when the library was last refreshed.
 
 Open Humble pages update from the new local cache after a successful fetch. A failed fetch keeps the previous library and saved account. Data remains local until you fetch again; browsing Humble does not trigger Steam API calls.
 

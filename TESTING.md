@@ -8,7 +8,7 @@ Load `dist/chrome` into a separate Chrome test profile and `dist/firefox/manifes
 
 Record the browser version, page URL, login state, expected count, observed count, and any console errors for each relevant case:
 
-- Fresh installation: clicking the toolbar action opens options, shows the correct version, and has no prefilled API key.
+- Fresh installation: the popup shows the correct version and cache status; **Open settings** opens options with no prefilled API key. Installing/updating must not open unsolicited tabs or contact Steam.
 - Import a valid public Steam library. Confirm the cached count, saved account ID, and key-field cleanup. Inspect extension-local storage to confirm the key is absent.
 - Compare known owned/unowned games on an ordinary bundle, public `/membership`, and logged-in `/membership/home`. Check total counts, playtest/non-Steam Choice exclusion, and cross-promotion exclusion.
 - Compare desktop and narrow layouts, lazy-loaded cards, tier changes, and navigation dropdowns. Check that OWNED remains readable below CLAIMED and does not cover site menus.

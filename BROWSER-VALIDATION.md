@@ -12,6 +12,16 @@ The reviewed work was merged onto the existing v3.4.5 canary source as v3.4.6. T
 - Both runtime ZIPs contain eleven files, including the popup and its script, without development dependencies. Independent archive checks confirmed each package matches the merged source.
 - The earlier v3.3.10 Chrome test ZIP is retained under `test-builds/` for comparison. The current Chrome and unsigned Firefox v3.4.6 downloads are documented in `test-builds/README.md`.
 
+## Release acceptance
+
+The user confirmed successful testing with signed-in Humble pages and a real Steam library. This is user-reported acceptance, separate from the synthetic-library automation above.
+
+Fresh disposable Chromium 156.0.8078.47 and Firefox 158.0.1 profiles both returned `isOnToolbar: false` from their native action APIs. No extension code changes were needed for toolbar placement. Install/update handlers only scrub the legacy API key, and additional regression checks protect that behavior.
+
+The final suite passes 63 tests. Both validators and Firefox lint pass. Rebuilt Chrome and Firefox ZIPs are byte-identical to the v3.4.6 packages accepted by the user; the final changes affect documentation, tests, and release automation.
+
+GitHub publishes the versioned Chrome and unsigned Firefox packages after validation succeeds on `main`. Existing release tags/assets are preserved on subsequent pushes with the same version. This does not publish to either browser store.
+
 ## Environment and method
 
 Tests ran on Ubuntu 24.04 ARM64 using native headless Chromium 156.0.8078.47 and Firefox 158.0.1, driven through their WebDriver implementations in disposable profiles. Chromium is not branded Google Chrome. Firefox loaded the unsigned build temporarily. These checks establish behavior in the tested browser versions; they do not establish behavior at the declared Firefox 140 minimum or on Android.
@@ -57,8 +67,8 @@ The baseline's failed narrow-bundle assertion is evidence of the pre-existing is
 ## Remaining manual acceptance
 
 - Branded Google Chrome on a user's desktop, especially its actual unpacked/store installation and permission flow.
-- Signed-in Choice `/membership/home`, CLAIMED transitions, site dropdown stacking, and back/forward transitions on actual authenticated pages. DOM regression fixtures cover these behaviors only within their modeled layouts.
-- A successful import from a controlled public Steam account; private/unavailable libraries; actual disconnection, slow requests, and revoked host permissions. API success and failure variants have automated mocked coverage, and the real HTTP 401 path passed in both browsers.
+- Detailed CLAIMED transitions, site dropdown stacking, and back/forward edge cases on authenticated pages beyond the user-reported signed-in acceptance.
+- Additional private/unavailable-library, actual disconnection, slow-request, and revoked-host-permission checks. Real-library import passed user acceptance; error variants have automated mocked coverage, and the real HTTP 401 path passed in both browsers.
 - Browser restart persistence and Firefox background suspension/restart behavior.
 - A Mozilla-signed Firefox installation, data consent, installation permissions, and final submission metadata.
 - Firefox 140 and Android. Android support is not verified or advertised.

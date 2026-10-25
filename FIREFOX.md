@@ -15,6 +15,6 @@ Before submitting to Mozilla:
 5. Upload the Firefox ZIP with `manifest.json` at its root. This project ships readable source; include the build instructions/source when requested by AMO.
 6. Obtain Mozilla signing for a listed or unlisted release. The generated ZIP has not been signed. Each submitted update needs a new accepted version; GitHub canary filenames do not change the manifest version.
 
-No signing or submission occurs during local builds or normal CI. The existing canary workflow publishes GitHub prereleases only after a matching tag is deliberately pushed; it does not publish to either browser store.
+No browser-store signing or submission occurs during local builds or CI. Successful CI on `main` publishes versioned GitHub downloads. The canary workflow publishes GitHub prereleases after a matching canary tag is pushed. Firefox packages remain unsigned in both cases.
 
 References: [background environments](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/background), [MV3 Promise support](https://bugzilla.mozilla.org/show_bug.cgi?id=1926713#c2), [data consent](https://extensionworkshop.com/documentation/develop/firefox-builtin-data-consent/), [signing](https://extensionworkshop.com/documentation/publish/signing-and-distribution-overview/).

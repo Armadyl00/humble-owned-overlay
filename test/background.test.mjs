@@ -6,6 +6,21 @@ const oldCache = { fetchedAt: 1, games: [{ appid: 2, name: 'Previous Game' }] };
 const refresh = { type: 'refreshNow', apiKey: 'temporary-secret', steamId };
 
 for (const firefox of [false, true]) {
+  for (const reason of ['install', 'update']) {
+    test(`${reason} only clears a legacy key and preserves the library (${firefox ? 'Firefox' : 'Chrome'})`, async () => {
+      const state = background({ cache: oldCache, firefox });
+      state.storage.steamApiKey = 'legacy-secret';
+      await state.install({ reason });
+      assert.equal(state.storage.steamApiKey, undefined);
+      assert.deepEqual(state.storage.ownedGamesCache, oldCache);
+      assert.equal(state.optionsOpened, undefined);
+      assert.equal(state.fetches.length, 0);
+      assert.equal(state.writes.length, 0);
+    });
+  }
+}
+
+for (const firefox of [false, true]) {
   test(`fetches and caches a library without persisting the key (${firefox ? 'Firefox scripts' : 'Chrome worker'})`, async () => {
     const state = background({ firefox });
     const response = await state.request(refresh);
