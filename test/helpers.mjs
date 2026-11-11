@@ -93,3 +93,8 @@ export async function content({ html, url, owned = ['game'], sendMessage, badges
 
 export const card = (title, id = '') => `<article id="${id}" style="position:static"><img alt="${title}"><h3>${title}</h3></article>`;
 export const bundle = cards => `<h1>Bundle</h1><section class="js-desktop-tiers-view">${cards}</section>`;
+export const nextCard = (title, type = 'games') => `<li><button type="button"><div data-testid="bundle-item-card" data-bundle-type="${type}">
+  <div><div data-testid="product-thumbnail" style="position:relative"><img alt="${title}"></div></div>
+  <div><div class="line-clamp-2">${title}</div></div></div></button></li>`;
+export const nextBundle = cards => `<h1>Bundle</h1><h1>Bundle</h1><h3>Select your bundle</h3>
+  <section data-testid="bundle-item-section-games"><ul>${cards}</ul></section>`;

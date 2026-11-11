@@ -51,9 +51,30 @@
     }
 
     if (!Array.isArray(response.owned)) return;
+
+    if (isNextLayout()) {
+      await waitForNextHydration();
+      if (version !== initVersion || location.href !== url) return;
+    }
+
     ownedSet = new Set(response.owned.filter(title => typeof title === 'string' && title));
     tagPage();
     startMutationObserver();
+  }
+
+  // React reports a hydration error if it finds overlay nodes it did not
+  // render, so give the Next.js layout a moment after a full page load before
+  // tagging. Client-side navigation happens later and is not delayed.
+  const HYDRATION_GRACE_MS = 1000;
+
+  async function waitForNextHydration() {
+    if (document.readyState !== 'complete') {
+      await new Promise(resolve => window.addEventListener('load', resolve, { once: true }));
+    }
+
+    const loadEnd = performance.getEntriesByType?.('navigation')[0]?.loadEventEnd || performance.now();
+    const remaining = loadEnd + HYDRATION_GRACE_MS - performance.now();
+    if (remaining > 0) await new Promise(resolve => setTimeout(resolve, remaining));
   }
 
   // -- DOM tagging -----------------------------------------------------------
@@ -77,6 +98,7 @@
       const norm = normalizeTitle(titleText);
       if (norm && ownedSet.has(norm)) {
         ownedTitles.add(titleText);
+        if (!cardEl) continue;
         ownedCards.add(cardEl);
         if (!cardEl.querySelector('.hbo-badge')) {
           const badge = document.createElement('span');
@@ -132,7 +154,40 @@
     '.js-other-bundles-view, .other-bundles-view-container, ' +
     '[class*="cross-sell"], [class*="recommend"], [class*="related-bundle"]';
 
+  // Humble's Next.js bundle layout marks each game card with stable
+  // data-testid attributes instead of the legacy class names.
+  const NEXT_GAME_CARD_SELECTOR = '[data-testid="bundle-item-card"][data-bundle-type="games"]';
+  const NEXT_GAMES_SECTION_SELECTOR = '[data-testid="bundle-item-section-games"]';
+
+  function isNextLayout() {
+    return !!document.querySelector('[data-testid^="bundle-"], script[src*="/_next/"]');
+  }
+
+  // The image alt text is the exact game title; the badge anchors to the
+  // thumbnail, which Humble already positions relatively.
+  function findNextBundleTiles() {
+    const results = [];
+
+    document.querySelectorAll(NEXT_GAME_CARD_SELECTOR).forEach(card => {
+      const thumbnail = card.querySelector('[data-testid="product-thumbnail"]');
+      const titleText = (
+        thumbnail?.querySelector('img[alt]')?.getAttribute('alt') ||
+        card.querySelector('[class*="line-clamp"]')?.textContent ||
+        ''
+      ).trim();
+      if (!titleText) return;
+
+      results.push({ titleEl: card, cardEl: thumbnail || card, titleText });
+    });
+
+    return results;
+  }
+
   function findBundleTiles() {
+    // The legacy discovery below stays for the previous Humble layout; on the
+    // Next.js layout its heading guesses only match unrelated section titles.
+    if (isNextLayout()) return findNextBundleTiles();
+
     // Prefer scoping to the bundle's tier view when present; fall back to the
     // whole document for legacy layouts that don't expose that container.
     const scopes = [document.querySelector('.js-desktop-tiers-view'), document.querySelector('.js-mobile-tiers-view')]
@@ -212,6 +267,9 @@
   // -- Humble Choice discovery ---------------------------------------------
 
   function findChoiceTiles() {
+    const nextTiles = findNextChoiceTiles();
+    if (nextTiles.length > 0) return nextTiles;
+
     const results = [];
     const seen = new Set();
 
@@ -294,6 +352,148 @@
     return '';
   }
 
+  // -- Next.js Humble Choice discovery -------------------------------------
+  //
+  // The public Choice carousel shows unlabelled thumbnails. Titles are only
+  // in the page's embedded Next.js data, so each
+  // carousel image is matched to its product by thumbnail URL.
+
+  let nextChoiceProducts = null;
+
+  function findNextChoiceTiles() {
+    const products = readNextChoiceProducts().filter(product => isNextChoiceGameTitle(product.title));
+    const memberTiles = findNextMemberChoiceTiles();
+
+    // On the member page the carousel only appears inside the details dialog.
+    const carousel = document.querySelector('section[aria-label="Media carousel"]');
+    if (!carousel || products.length === 0) return memberTiles;
+
+    // Humble only renders a few thumbnails at a time, so every product is
+    // counted from the data and only the rendered images receive badges.
+    const results = memberTiles.length > 0
+      ? memberTiles
+      : products.map(product => ({ titleEl: null, cardEl: null, titleText: product.title }));
+
+    carousel.querySelectorAll('img').forEach(img => {
+      const src = decodeImageSource(img.getAttribute('src') || '');
+      const product = products.find(item => src.includes(item.thumbnailPath));
+      const cardEl = img.closest('button, figure');
+      if (!product || !cardEl) return;
+
+      results.push({ titleEl: img, cardEl, titleText: product.title });
+    });
+
+    return results;
+  }
+
+  // The signed-in member page lists every item as a titled card.
+  const NEXT_MEMBER_CARD_SELECTOR = 'button[aria-label^="View details for "] [data-testid="product-card"]';
+
+  // Only the first grid holds this month's games; later groups are extras.
+  function findNextMemberCards() {
+    const cards = Array.from(document.querySelectorAll(NEXT_MEMBER_CARD_SELECTOR));
+    const grid = cards[0]?.closest('button').parentElement;
+    return cards.filter(card => card.closest('button').parentElement === grid);
+  }
+
+  function findNextMemberChoiceTiles() {
+    const results = [];
+
+    findNextMemberCards().forEach(card => {
+      const label = card.closest('button').getAttribute('aria-label');
+      const titleText = label.slice('View details for '.length).trim();
+      if (!isNextChoiceGameTitle(titleText)) return;
+
+      const cardEl = card.querySelector('[data-testid="product-thumbnail"]') || card;
+      results.push({ titleEl: card, cardEl, titleText });
+    });
+
+    return results;
+  }
+
+  // Games on other launchers still count toward the total; they just cannot
+  // be confirmed as owned. Playtests and the monthly IGN Plus offer are not games.
+  function isNextChoiceGameTitle(title) {
+    return isLikelyGameTitle(title) && !/\b(subscription|ign plus)\b/i.test(title);
+  }
+
+  function decodeImageSource(src) {
+    try {
+      return decodeURIComponent(src);
+    } catch {
+      return src;
+    }
+  }
+
+  function readNextChoiceProducts() {
+    if (nextChoiceProducts) return nextChoiceProducts;
+
+    let stream = '';
+    document.querySelectorAll('script:not([src])').forEach(script => {
+      const text = script.textContent || '';
+      if (!text.includes('__next_f.push([1,')) return;
+
+      try {
+        const chunk = JSON.parse(text.slice(text.indexOf('['), text.lastIndexOf(']') + 1));
+        if (typeof chunk[1] === 'string') stream += chunk[1];
+      } catch {
+        // Ignore chunks that are not plain JSON; the overlay simply stays off.
+      }
+    });
+
+    const products = [];
+    const marker = '"subscriptionProducts":';
+    for (let at = stream.indexOf(marker); at !== -1; at = stream.indexOf(marker, at + 1)) {
+      const list = parseJsonArrayAt(stream, at + marker.length);
+      if (!Array.isArray(list)) continue;
+
+      for (const item of list) {
+        const thumbnailPath = getUrlPath(item?.thumbnail);
+        if (typeof item?.title !== 'string' || !item.title.trim() || !thumbnailPath) continue;
+
+        products.push({ title: item.title.trim(), thumbnailPath });
+      }
+    }
+
+    if (products.length > 0) nextChoiceProducts = products;
+    return products;
+  }
+
+  function getUrlPath(url) {
+    try {
+      return new URL(url).pathname;
+    } catch {
+      return '';
+    }
+  }
+
+  // Parses the JSON array that starts at text[start], ignoring what follows.
+  function parseJsonArrayAt(text, start) {
+    if (text[start] !== '[') return null;
+
+    let depth = 0;
+    let inString = false;
+    for (let i = start; i < text.length; i++) {
+      const ch = text[i];
+      if (inString) {
+        if (ch === '\\') i++;
+        else if (ch === '"') inString = false;
+      } else if (ch === '"') {
+        inString = true;
+      } else if (ch === '[' || ch === '{') {
+        depth++;
+      } else if ((ch === ']' || ch === '}') && --depth === 0) {
+        try {
+          return JSON.parse(text.slice(start, i + 1));
+        } catch {
+          return null;
+        }
+      }
+    }
+
+    return null;
+  }
+
   function parseJsonAttribute(el, datasetKey) {
     try {
       const value = el.dataset?.[datasetKey];
@@ -362,6 +562,12 @@
   function placeBundleCounter(counter) {
     document.getElementById('hbo-counter-row')?.remove();
 
+    const gamesSection = document.querySelector(NEXT_GAMES_SECTION_SELECTOR);
+    if (gamesSection) {
+      if (gamesSection.firstElementChild !== counter) gamesSection.prepend(counter);
+      return;
+    }
+
     const anchor = findCounterAnchor('bundle');
     if (anchor) {
       placeAdjacent(anchor, 'afterend', counter);
@@ -376,6 +582,11 @@
   }
 
   function findChoiceCounterPlacement() {
+    const memberGrid = findNextMemberCards()[0]?.closest('button').parentElement;
+    if (memberGrid) {
+      return { element: memberGrid, position: 'beforebegin', kind: 'public-choice-games' };
+    }
+
     const monthHeader = findShortTextElement(/^[a-z]+\s+\d{4}\s+games$/i);
     const monthSection = monthHeader ? findChoiceMonthSection(monthHeader) : null;
     if (monthSection) {

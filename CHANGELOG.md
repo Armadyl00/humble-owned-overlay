@@ -1,5 +1,13 @@
 # Changelog
 
+## v3.5.0
+
+- Support Humble's redesigned (Next.js) game bundle pages: find game cards by their `data-testid` markers, badge the card thumbnail, and place the counter above the games grid.
+- Wait briefly after a full page load before tagging the redesigned layout so the overlay does not cause a React hydration error.
+- Keep the previous bundle discovery unchanged for the legacy layout in case Humble restores it.
+- Support the redesigned public Humble Choice page: count games from the page's embedded data and badge the carousel thumbnails that are on screen. After in-site navigation to Choice from another page, reload once if no counter appears.
+- Support the redesigned signed-in Choice page (`/membership/home`): badge the titled cards and show the counter above the grid. Its details dialog is badged too. On both redesigned Choice pages, games for other launchers count toward the total but cannot be marked owned; playtests and the IGN Plus offer are not counted.
+
 ## v3.4.7
 
 - Add a gamepad and ownership-check icon for the extensions page, toolbar, and installation screens in Chrome and Firefox.
