@@ -9,7 +9,7 @@
 - Support the redesigned signed-in Choice page (`/membership/home`): badge the titled cards and show the counter above the grid. Its details dialog is badged too. On both redesigned Choice pages, games for other launchers count toward the total but cannot be marked owned; playtests and the IGN Plus offer are not counted.
 - Simplify the settings page and toolbar popup: plainer wording, less text on screen, and colours that follow the browser's light or dark theme. Fetch behaviour is unchanged.
 - Rewrite the README.
-- Replace the gamepad icon with a stack of bundle tiles and a green tick.
+- Replace the gamepad icon with a red and navy tile and a green tick.
 
 ## v3.4.7
 
