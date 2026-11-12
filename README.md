@@ -2,9 +2,9 @@
 
 A browser extension that shows which games in a Humble Bundle or Humble Choice month you already own on Steam. Owned games get a green **Owned** badge, and a counter near the top shows "X / Y games owned".
 
-Install it from the [Chrome Web Store](https://chromewebstore.google.com/detail/humble-bundle-owned-overl/bkbliccgapgfedaploklillhkmlailik). Problems or requests: [open an issue](https://github.com/Armadyl00/humble-owned-overlay/issues).
+Install it from the [Chrome Web Store](https://chromewebstore.google.com/detail/humble-bundle-owned-overl/bkbliccgapgfedaploklillhkmlailik). Problems or requests: [open an issue](https://github.com/Armadyl00/library-checker-for-humble-bundle/issues).
 
-> **Status, November 2026:** Current GitHub releases support Humble's redesigned site. The pre-redesign version is preserved on [`backup/main-before-redesign-2026-11-12`](https://github.com/Armadyl00/humble-owned-overlay/tree/backup/main-before-redesign-2026-11-12), and the [v3.4.7 downloads](https://github.com/Armadyl00/humble-owned-overlay/releases/tag/v3.4.7) remain available as a fallback.
+> **Status, November 2026:** Current GitHub releases support Humble's redesigned site. The pre-redesign version is preserved on [`backup/main-before-redesign-2026-11-12`](https://github.com/Armadyl00/library-checker-for-humble-bundle/tree/backup/main-before-redesign-2026-11-12), and the [v3.4.7 downloads](https://github.com/Armadyl00/library-checker-for-humble-bundle/releases/tag/v3.4.7) remain available as a fallback.
 
 > **Disclaimer:** This extension was built collaboratively with [Claude](https://claude.com) for personal use and learning. I am not a software engineer. The code is published as-is, so review it yourself before installing.
 
@@ -47,7 +47,7 @@ See [PRIVACY.md](PRIVACY.md) for the full policy.
 
 ## Installing from source
 
-Browser packages are on [GitHub Releases](https://github.com/Armadyl00/humble-owned-overlay/releases/latest).
+Browser packages are on [GitHub Releases](https://github.com/Armadyl00/library-checker-for-humble-bundle/releases/latest).
 
 Chrome: extract the Chrome ZIP (or clone this repo) to a folder that won't move, open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and pick the folder.
 

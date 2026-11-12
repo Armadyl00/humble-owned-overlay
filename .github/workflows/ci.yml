@@ -30,7 +30,7 @@ jobs:
 
   release:
     needs: validate
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'Armadyl00/humble-owned-overlay'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'Armadyl00/library-checker-for-humble-bundle'
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   release:
-    if: github.repository == 'Armadyl00/humble-owned-overlay'
+    if: github.repository == 'Armadyl00/library-checker-for-humble-bundle'
     runs-on: ubuntu-latest
 
     steps:
