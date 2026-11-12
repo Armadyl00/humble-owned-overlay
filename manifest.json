@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Humble Bundle Owned Overlay",
-  "version": "3.5.1",
+  "name": "Steam Library Checker for Humble Bundle",
+  "version": "3.5.2",
   "description": "Stop buying games you already own on Humble Bundle. See which bundle and Humble Choice games are already in your Steam library.",
   "permissions": [
     "storage"
@@ -11,7 +11,7 @@
     "https://api.steampowered.com/*"
   ],
   "action": {
-    "default_title": "Open Humble Bundle Owned Overlay options",
+    "default_title": "Open Steam Library Checker for Humble Bundle settings",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon-16.png",

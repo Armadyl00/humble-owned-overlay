@@ -133,7 +133,7 @@ function makeFixture() {
   fs.writeFileSync(path.join(root, 'options.html'), '<script src="options.js"></script>\n');
   fs.writeFileSync(path.join(root, 'manifest.json'), `${JSON.stringify({
     manifest_version: 3,
-    name: 'Humble Bundle Owned Overlay',
+    name: 'Steam Library Checker for Humble Bundle',
     version: '3.4.6',
     description: 'Shows which games in a Humble Bundle you already own on Steam.',
     permissions: ['storage'],
@@ -142,7 +142,7 @@ function makeFixture() {
       'https://api.steampowered.com/*'
     ],
     action: {
-      default_title: 'Open Humble Bundle Owned Overlay options'
+      default_title: 'Open Steam Library Checker for Humble Bundle settings'
     },
     background: { service_worker: 'background.js' },
     content_scripts: [{

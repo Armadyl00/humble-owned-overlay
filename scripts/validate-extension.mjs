@@ -8,7 +8,7 @@ const EXPECTED_HOST_PERMISSIONS = [
   'https://api.steampowered.com/*'
 ];
 const EXPECTED_CONTENT_MATCHES = ['https://www.humblebundle.com/*'];
-const EXPECTED_ACTION_TITLE = 'Open Humble Bundle Owned Overlay options';
+const EXPECTED_ACTION_TITLE = 'Open Steam Library Checker for Humble Bundle settings';
 
 export function createBrowserManifest(manifest, browser) {
   assert(browser === 'chrome' || browser === 'firefox', `Unknown browser: ${browser}`);

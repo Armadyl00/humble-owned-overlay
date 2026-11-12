@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.5.2
+
+- Rename the extension to Steam Library Checker for Humble Bundle in the store package, settings page, popup and toolbar tooltip.
+
 ## v3.5.1
 
 - Update the Chrome Web Store summary to mention bundle and Humble Choice games in your Steam library.
