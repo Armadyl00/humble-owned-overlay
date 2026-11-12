@@ -73,8 +73,6 @@ Successful CI on `main` publishes the current version's Chrome and Firefox ZIPs 
 
 Icon PNGs are checked in. To regenerate them after editing `icons/icon.svg`, run `bash scripts/render-icons.sh` with librsvg's `rsvg-convert` installed. Normal builds do not require this tool.
 
-See [TESTING.md](TESTING.md) for browser acceptance checks. See [FIREFOX.md](FIREFOX.md) for signing and submission requirements.
-
 ## Files
 
 ```
@@ -89,7 +87,7 @@ options.html/.js    # settings page
 lib/normalize.js    # title normalisation (edition suffixes etc.)
 ```
 
-Version history is in [CHANGELOG.md](CHANGELOG.md). Tested scope is in [BROWSER-VALIDATION.md](BROWSER-VALIDATION.md).
+Version history is in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
