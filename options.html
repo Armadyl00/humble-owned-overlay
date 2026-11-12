@@ -3,210 +3,119 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Humble Bundle Owned Overlay — Settings</title>
+  <title>Humble Bundle Owned Overlay settings</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      color-scheme: light dark;
+      --bg: #ffffff;
+      --text: #202124;
+      --muted: #5f6368;
+      --line: #dadce0;
+      --field: #ffffff;
+      --link: #1a73e8;
+      --green: #1a9e1a;
+      --ok: #137333;
+      --err: #c5221f;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #202124;
+        --text: #e8eaed;
+        --muted: #9aa0a6;
+        --line: #3c4043;
+        --field: #292a2d;
+        --link: #8ab4f8;
+        --ok: #81c995;
+        --err: #f28b82;
+      }
+    }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      font-size: 14px;
-      background: #1a1a2e;
-      color: #e0e0e0;
       margin: 0;
-      padding: 32px 24px;
-      min-height: 100vh;
+      padding: 40px 24px;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
     }
+    main { max-width: 520px; margin: 0 auto; }
 
-    .container {
-      max-width: 540px;
-      margin: 0 auto;
+    h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+
+    label { display: block; font-weight: 600; margin: 20px 0 6px; }
+    .hint { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+    a { color: var(--link); }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 7px 10px;
+      font: inherit;
+      color: var(--text);
+      background: var(--field);
+      border: 1px solid var(--line);
+      border-radius: 4px;
     }
+    .key-row { display: flex; gap: 8px; }
+    .key-row input { flex: 1; }
 
-    h1 {
-      font-size: 20px;
-      font-weight: 700;
-      margin: 0 0 6px;
-      color: #fff;
-    }
-
-    .subtitle {
-      color: #888;
-      margin: 0 0 28px;
-      font-size: 13px;
-    }
-
-    .field {
-      margin-bottom: 20px;
-    }
-
-    label {
-      display: block;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: #ccc;
-    }
-
-    .hint {
-      font-size: 12px;
-      color: #777;
-      margin: 4px 0 0;
-      line-height: 1.5;
-    }
-
-    .hint a {
-      color: #5b9bd5;
-      text-decoration: none;
-    }
-
-    .hint a:hover { text-decoration: underline; }
-
-    .hint strong { color: #ccc; }
-
-    .input-row {
-      display: flex;
-      gap: 8px;
-    }
-
-    input[type="password"],
-    input[type="text"] {
-      flex: 1;
-      background: #16213e;
-      border: 1px solid #2a2a4a;
-      border-radius: 6px;
-      color: #e0e0e0;
-      font-size: 14px;
-      padding: 8px 12px;
-      outline: none;
-      transition: border-color 0.15s;
-    }
-
-    input:focus { border-color: #5b9bd5; }
-
-    .toggle-btn {
-      background: #16213e;
-      border: 1px solid #2a2a4a;
-      border-radius: 6px;
-      color: #aaa;
+    button {
+      font: inherit;
+      padding: 7px 14px;
+      border-radius: 4px;
       cursor: pointer;
-      font-size: 13px;
-      padding: 0 12px;
-      white-space: nowrap;
+      color: var(--text);
+      background: transparent;
+      border: 1px solid var(--line);
     }
-
-    .toggle-btn:hover { color: #fff; border-color: #5b9bd5; }
-
-    .actions {
+    #refresh-btn {
       margin-top: 24px;
-    }
-
-    button#refresh-btn {
-      background: #1a9e1a;
       color: #fff;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
+      background: var(--green);
+      border-color: var(--green);
       font-weight: 600;
-      padding: 10px 22px;
-      transition: opacity 0.15s;
     }
+    #refresh-btn:disabled { opacity: 0.6; cursor: default; }
 
-    button#refresh-btn:hover:not(:disabled) { opacity: 0.85; }
-    button#refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    #cache-info { color: var(--muted); font-size: 13px; margin: 12px 0 0; }
+    #status { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
+    #status:empty { display: none; }
+    #status.ok { color: var(--ok); }
+    #status.err { color: var(--err); }
 
-    #status {
-      margin-top: 16px;
-      font-size: 13px;
-      min-height: 20px;
-      border-radius: 6px;
-      padding: 8px 12px;
-      display: none;
-    }
-
-    #status.ok {
-      display: block;
-      background: #0d3b0d;
-      color: #5de05d;
-      border: 1px solid #1a6e1a;
-    }
-
-    #status.err {
-      display: block;
-      background: #3b0d0d;
-      color: #e05d5d;
-      border: 1px solid #6e1a1a;
-    }
-
-    #status.info {
-      display: block;
-      background: #0d1f3b;
-      color: #5d9de0;
-      border: 1px solid #1a3a6e;
-    }
-
-    .cache-info {
-      margin-top: 20px;
+    footer {
+      margin-top: 40px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
       font-size: 12px;
-      color: #666;
     }
-
-    .security-note {
-      margin-top: 28px;
-      padding: 12px 14px;
-      background: #16213e;
-      border: 1px solid #2a2a4a;
-      border-radius: 6px;
-      font-size: 12px;
-      color: #999;
-      line-height: 1.5;
-    }
-
-    .security-note strong { color: #ccc; }
   </style>
 </head>
 <body>
-  <div class="container">
+  <main>
     <h1>Humble Bundle Owned Overlay</h1>
-    <p class="subtitle">Shows which games in a bundle you already own on Steam.</p>
 
-    <div class="field">
-      <label for="steam-id">SteamID64</label>
-      <input type="text" id="steam-id" placeholder="e.g. 76561198000000000" autocomplete="off" spellcheck="false" maxlength="20" />
-      <p class="hint">
-        17-digit number. Find yours at
-        <a href="https://steamid.io" target="_blank" rel="noopener">steamid.io</a>.
-        Saved between sessions. Your Steam profile and game details must be set to <strong>Public</strong>.
-      </p>
+    <label for="steam-id">SteamID64</label>
+    <input type="text" id="steam-id" placeholder="e.g. 76561198000000000" autocomplete="off" spellcheck="false" maxlength="20" />
+    <p class="hint">Find yours on <a href="https://steamid.io" target="_blank" rel="noopener">steamid.io</a>.</p>
+
+    <label for="api-key">Steam Web API key</label>
+    <div class="key-row">
+      <input type="password" id="api-key" placeholder="Paste your key" autocomplete="off" spellcheck="false" />
+      <button id="toggle-key" type="button">Show</button>
     </div>
+    <p class="hint">Get one at <a href="https://steamcommunity.com/dev/apikey" target="_blank" rel="noopener">steamcommunity.com/dev/apikey</a>. It isn't saved.</p>
 
-    <div class="field">
-      <label for="api-key">Steam Web API Key</label>
-      <div class="input-row">
-        <input type="password" id="api-key" placeholder="Paste your Steam API key" autocomplete="off" spellcheck="false" />
-        <button class="toggle-btn" id="toggle-key" type="button">Show</button>
-      </div>
-      <p class="hint">
-        Get one at
-        <a href="https://steamcommunity.com/dev/apikey" target="_blank" rel="noopener">steamcommunity.com/dev/apikey</a>.
-        <strong>Not stored</strong> — keep it in a password manager and paste it here whenever you want to refresh your library.
-      </p>
-    </div>
+    <button id="refresh-btn" type="button">Fetch library</button>
+    <p id="cache-info"></p>
+    <p id="status" role="status" aria-live="polite" aria-atomic="true"></p>
 
-    <div class="actions">
-      <button id="refresh-btn" type="button">Fetch library</button>
-    </div>
-
-    <div id="status" role="status" aria-live="polite" aria-atomic="true"></div>
-    <p class="cache-info" id="cache-info"></p>
-
-    <div class="security-note">
-      <strong>Security:</strong> The extension does not save your API key. It is sent
-      to Steam over HTTPS when you fetch your library, and this input is cleared
-      after the attempt. Your SteamID64, returned game records, and refresh time are saved
-      locally in your browser. No automatic refreshes —
-      click <em>Fetch library</em> whenever you buy new games.
-    </div>
-  </div>
+    <footer>
+      <span id="version"></span> ·
+      <a href="https://github.com/Armadyl00/humble-owned-overlay" target="_blank" rel="noopener">GitHub</a> ·
+      <a href="https://github.com/Armadyl00/humble-owned-overlay/issues" target="_blank" rel="noopener">Report a problem</a>
+    </footer>
+  </main>
 
   <script src="options.js"></script>
 </body>

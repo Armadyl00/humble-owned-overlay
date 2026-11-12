@@ -77,7 +77,7 @@ refreshBtn.addEventListener('click', async () => {
     }
     const count = response.gameCount ?? response.owned.length;
     updateCacheInfo({ fetchedAt: response.fetchedAt }, count);
-    showStatus(`Library refreshed — ${count} games loaded. API key was not stored.`, 'ok');
+    showStatus(`Got ${gamesLabel(count)} from Steam.`, 'ok');
   } catch {
     showStatus('Could not contact the background script. Try reloading the extension and fetching again.', 'err');
   } finally {
@@ -90,23 +90,12 @@ refreshBtn.addEventListener('click', async () => {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function showExtensionVersion() {
-  const title = document.querySelector('h1');
-  if (!title) return;
+  const version = document.getElementById('version');
+  if (version) version.textContent = `v${chrome.runtime.getManifest().version}`;
+}
 
-  const version = document.createElement('span');
-  version.textContent = `v${chrome.runtime.getManifest().version}`;
-  version.style.display = 'inline-block';
-  version.style.margin = '0 0 18px';
-  version.style.padding = '4px 8px';
-  version.style.border = '1px solid #2a2a4a';
-  version.style.borderRadius = '999px';
-  version.style.background = '#16213e';
-  version.style.color = '#aaa';
-  version.style.fontSize = '12px';
-  version.style.fontWeight = '600';
-  version.style.lineHeight = '1';
-
-  title.insertAdjacentElement('afterend', version);
+function gamesLabel(count) {
+  return `${count.toLocaleString('en-GB')} game${count === 1 ? '' : 's'}`;
 }
 
 function showStatus(message, type) {
@@ -116,7 +105,7 @@ function showStatus(message, type) {
 
 function updateCacheInfo(cache, count = cache?.games?.length ?? 0) {
   if (!cache?.fetchedAt) {
-    cacheInfoEl.textContent = 'Library not yet loaded.';
+    cacheInfoEl.textContent = 'No library fetched yet.';
     return;
   }
 
@@ -131,5 +120,5 @@ function updateCacheInfo(cache, count = cache?.games?.length ?? 0) {
   else if (ageHr < 24) when = `${ageHr} hour${ageHr === 1 ? '' : 's'} ago`;
   else when = `${ageDay} day${ageDay === 1 ? '' : 's'} ago`;
 
-  cacheInfoEl.textContent = `Cache: ${count} games · last refreshed ${when}`;
+  cacheInfoEl.textContent = `${gamesLabel(count)} · fetched ${when}`;
 }

@@ -5,77 +5,67 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Humble Bundle Owned Overlay</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      color-scheme: light dark;
+      --bg: #ffffff;
+      --text: #202124;
+      --muted: #5f6368;
+      --line: #dadce0;
+      --field: #ffffff;
+      --link: #1a73e8;
+      --green: #1a9e1a;
+      --ok: #137333;
+      --err: #c5221f;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #202124;
+        --text: #e8eaed;
+        --muted: #9aa0a6;
+        --line: #3c4043;
+        --field: #292a2d;
+        --link: #8ab4f8;
+        --ok: #81c995;
+        --err: #f28b82;
+      }
+    }
 
     body {
-      width: 280px;
+      width: 260px;
       margin: 0;
       padding: 14px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      font-size: 13px;
-      background: #1a1a2e;
-      color: #e0e0e0;
+      background: var(--bg);
+      color: var(--text);
+      font: 13px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif;
     }
 
-    h1 {
-      margin: 0;
-      color: #fff;
-      font-size: 15px;
-      line-height: 1.25;
-    }
-
-    .version {
-      display: inline-block;
-      margin-top: 7px;
-      padding: 3px 7px;
-      border: 1px solid #2a2a4a;
-      border-radius: 999px;
-      background: #16213e;
-      color: #aaa;
-      font-size: 11px;
-      font-weight: 600;
-    }
+    h1 { margin: 0; font-size: 14px; font-weight: 600; }
 
     dl {
       display: grid;
       grid-template-columns: auto 1fr;
-      gap: 8px 12px;
-      margin: 16px 0;
-      padding: 12px;
-      border: 1px solid #2a2a4a;
-      border-radius: 6px;
-      background: #16213e;
+      gap: 6px 12px;
+      margin: 12px 0 14px;
     }
-
-    dt {
-      color: #aaa;
-      font-weight: 600;
-    }
-
-    dd {
-      margin: 0;
-      color: #fff;
-      text-align: right;
-    }
+    dt { color: var(--muted); }
+    dd { margin: 0; text-align: right; }
 
     button {
       width: 100%;
-      border: 0;
-      border-radius: 6px;
-      background: #1a9e1a;
-      color: #fff;
+      font: inherit;
+      padding: 7px 12px;
+      border-radius: 4px;
       cursor: pointer;
-      font-size: 13px;
-      font-weight: 700;
-      padding: 9px 12px;
+      color: var(--text);
+      background: transparent;
+      border: 1px solid var(--line);
     }
 
-    button:hover { opacity: 0.88; }
+    .version { display: block; margin-top: 10px; color: var(--muted); font-size: 11px; }
   </style>
 </head>
 <body>
   <h1>Humble Bundle Owned Overlay</h1>
-  <span class="version" id="version"></span>
 
   <dl>
     <dt>Status</dt>
@@ -87,6 +77,7 @@
   </dl>
 
   <button id="open-options" type="button">Open settings</button>
+  <span class="version" id="version"></span>
 
   <script src="popup.js"></script>
 </body>

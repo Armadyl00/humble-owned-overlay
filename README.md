@@ -1,58 +1,57 @@
 # Humble Bundle Owned Overlay
 
-A personal browser extension that shows which games in a Humble Bundle you already own on Steam.
+A browser extension that shows which games in a Humble Bundle or Humble Choice month you already own on Steam. Owned games get a green **Owned** badge, and a counter near the top shows "X / Y games owned".
 
-The reviewed Chrome baseline is v3.3.9. This checkout contains v3.4.7 with Firefox support, reliability fixes, a toolbar cache-status popup, and extension icons. Automated checks, native browser tests, and user testing with signed-in Humble pages and a real Steam library have passed. See [BROWSER-VALIDATION.md](BROWSER-VALIDATION.md) for the tested scope.
+Install it from the [Chrome Web Store](https://chromewebstore.google.com/detail/humble-bundle-owned-overl/bkbliccgapgfedaploklillhkmlailik). Problems or requests: [open an issue](https://github.com/Armadyl00/humble-owned-overlay/issues).
 
-> **Disclaimer:** This extension was built collaboratively with [Claude](https://claude.com) for personal use and learning. I am not a software engineer. The code is published as-is — review it yourself before installing.
+> **Status, November 2026:** Humble has redesigned its site. The store version (v3.4.7) only works on the old layout. v3.5.0 on the `canary` branch supports the new one, but I'm holding off on releasing it in case Humble rolls the redesign back.
 
-- Green **OWNED** badge on each game tile you already have
-- "X / Y games owned" counter near the bundle title
-- Toolbar popup with library cache status and a settings shortcut
-
+> **Disclaimer:** This extension was built collaboratively with [Claude](https://claude.com) for personal use and learning. I am not a software engineer. The code is published as-is, so review it yourself before installing.
 
 ## Screenshots
 
-**Options page**
-
-<img src="docs/screenshots/options-page.png" alt="Humble Bundle Owned Overlay options page" width="659">
-
-**Bundle overlay**
+These show Humble's old layout and will be redone once the redesign settles.
 
 <img src="docs/screenshots/bundle-counter.png" alt="Bundle page counter showing seven of eight games owned" width="943">
 
-**Owned game badges**
-
 <img src="docs/screenshots/owned-badge.png" alt="Owned badges over Humble Bundle game tiles" width="949">
-
-## How it works
-
-On the extension's options page, enter your SteamID64, paste your Steam Web API key, and click **Fetch library**. The extension caches the returned game records, SteamID64, and refresh time locally without saving the API key. To refresh after buying games, paste the key again.
-
-On supported Humble game bundle and Humble Choice pages, game titles are compared with your cached Steam library and matches are badged. Non-Steam Choice items, playtests, books, and software bundles are ignored. Title matching does not guarantee ownership of a particular edition, remaster, or its DLC. Non-Latin names that normalize to an empty value are skipped. Free games are excluded by the current Steam request's default settings. Ordinary bundle discovery does not verify each item's delivery platform.
 
 ## Setup
 
-1. **Get a Steam Web API key** at https://steamcommunity.com/dev/apikey (domain can be `localhost`)
-2. **Get your SteamID64** at https://steamid.io
-3. **Make sure your Steam profile + Game details are set to Public** (Steam → Privacy → Game details = Public)
+1. Get a Steam Web API key at https://steamcommunity.com/dev/apikey (the domain can be `localhost`).
+2. Find your SteamID64 at https://steamid.io.
+3. Set your Steam profile and game details to Public (Steam → Privacy → Game details).
+4. Open the extension's options, paste both in and click **Fetch library**.
 
-## Install
+Then open a Humble game bundle or Choice page. Anything you own gets badged.
 
-For the published Chrome version, use the [Chrome Web Store listing](https://chromewebstore.google.com/detail/humble-bundle-owned-overl/bkbliccgapgfedaploklillhkmlailik).
+The library doesn't update on its own. After buying games, open the options, paste the key again and fetch. Pages you already have open pick up the new list straight away. If a fetch fails, the previous list is kept. The toolbar popup shows how many games are cached and when they were last fetched.
 
-Browser packages are available from [GitHub Releases](https://github.com/Armadyl00/humble-owned-overlay/releases/latest). For local Chrome testing, extract the Chrome ZIP and load its folder as an unpacked extension.
+## What it does and doesn't match
 
-For a Chrome development checkout:
+Games are matched by title against your cached Steam library, so a match doesn't guarantee you own that exact edition, remaster or its DLC.
 
-1. Download the ZIP from this repo (Code → Download ZIP) — or `git clone`
-2. Extract to a stable folder
-3. Chrome → `chrome://extensions` → enable **Developer mode** → **Load unpacked** → pick the folder
-4. Right-click the extension → **Options** → paste your Steam API key + SteamID64 → click **Fetch library**
+- Book and software bundles, playtests and non-Steam Choice items are ignored.
+- Free games aren't in the list Steam returns, so they never show as owned.
+- Names that are entirely non-Latin characters are skipped.
+- On ordinary bundle pages the extension doesn't check which platform each item is delivered on.
 
-For Firefox development testing, extract the Firefox release ZIP or build the packages below. Open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**, and select `manifest.json` from the extracted folder (`dist/firefox/manifest.json` for a source build). Temporary extensions disappear when Firefox restarts. The Firefox build requires desktop Firefox 140 or later. Android support has not been verified.
+## Privacy
 
-A Firefox ZIP is unsigned and cannot be permanently installed into normal release Firefox until Mozilla signs it. Use a separate test profile to compare development builds against the working Chrome version.
+- The API key is never saved. It's sent to Steam over HTTPS for the fetch and the box is cleared afterwards. Keep it in a password manager. If you want to rotate it, revoke it at https://steamcommunity.com/dev/apikey and generate a new one.
+- Stored in the browser's local storage: your SteamID64, the game records Steam returned (app IDs, names, image references and playtime fields) and the time of the last fetch.
+- The only network request the extension makes is that manual fetch from Steam. Humble pages are compared locally and nothing about them is sent anywhere.
+- No analytics and no remote code. Host permissions are `humblebundle.com` and `api.steampowered.com` only.
+
+See [PRIVACY.md](PRIVACY.md) for the full policy.
+
+## Installing from source
+
+Browser packages are on [GitHub Releases](https://github.com/Armadyl00/humble-owned-overlay/releases/latest).
+
+Chrome: extract the Chrome ZIP (or clone this repo) to a folder that won't move, open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and pick the folder.
+
+Firefox: extract the Firefox ZIP, open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on** and select `manifest.json` (`dist/firefox/manifest.json` for a source build). Temporary add-ons disappear when Firefox restarts. The Firefox build needs desktop Firefox 140 or later and is unsigned, so it can't be permanently installed in release Firefox until Mozilla signs it. Android hasn't been tested.
 
 ## Development and packaging
 
@@ -74,44 +73,21 @@ Successful CI on `main` publishes the current version's Chrome and Firefox ZIPs 
 
 Icon PNGs are checked in. To regenerate them after editing `icons/icon.svg`, run `bash scripts/render-icons.sh` with librsvg's `rsvg-convert` installed. Normal builds do not require this tool.
 
-See [TESTING.md](TESTING.md) for browser acceptance checks. See [FIREFOX.md](FIREFOX.md) for signing and submission requirements.
-
-## Use
-
-After the initial fetch, open any supported Humble game bundle or Humble Choice page — owned Steam games get a green badge.
-
-Whenever you want to refresh (e.g. after buying new games), open the extension options, paste the key, click **Fetch library**.
-
-Open the extension's popup to check how many games are cached and when the library was last refreshed.
-
-Open Humble pages update from the new local cache after a successful fetch. A failed fetch keeps the previous library and saved account. Data remains local until you fetch again; browsing Humble does not trigger Steam API calls.
-
-## Security
-
-- **The extension does not persist the API key.** It is sent to Steam over HTTPS for a manual fetch, and the input is cleared after the attempt. Keep the key in a password manager and paste it whenever you want to refresh.
-- **SteamID64 is stored** between sessions and identifies the account associated with a successful fetch.
-- Returned Steam game records and their refresh time are cached in browser-local storage. These records can include app IDs, names, image references, and playtime fields returned by Steam.
-- Host permissions: only `humblebundle.com` and `api.steampowered.com`.
-- No analytics or remote code. The manual Steam API request sends your API key and SteamID64 to Steam; Humble page content is compared locally and is not transmitted.
-
-If you ever want to rotate the key, click **Revoke** at https://steamcommunity.com/dev/apikey and generate a new one.
-
 ## Files
 
 ```
-manifest.json       # MV3 manifest, minimal permissions
-background.js       # service worker — Steam API fetch + cache
-content.js          # runs on humblebundle.com — DOM scan + badging
-content.css         # badge + counter styling
+manifest.json       # MV3 manifest
+background.js       # service worker: Steam API fetch and cache
+content.js          # runs on humblebundle.com: finds games and adds badges
+content-choice-badges.js  # badges on the redesigned Humble Choice pages
+content.css         # badge and counter styling
 icons/              # vector source and PNG extension icons
-popup.html/.js      # toolbar cache-status popup
+popup.html/.js      # toolbar popup with cache status
 options.html/.js    # settings page
-lib/normalize.js    # title-normalization helper (edition suffixes, etc.)
+lib/normalize.js    # title normalisation (edition suffixes etc.)
 ```
 
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for version history.
+Version history is in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

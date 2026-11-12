@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { bundle, card, content, flush } from './helpers.mjs';
+import { bundle, card, content, flush, nextBundle, nextCard } from './helpers.mjs';
 
 test('bundle badges and counts exclude cross-promotions and review headings', async t => {
   const state = await content({ html: bundle(card('Game', 'owned') + card('Another Game') + '<h4>94% Positive on Steam</h4>') +
@@ -71,6 +71,38 @@ test('unrelated non-Latin titles cannot match an empty owned key', async t => {
   t.after(state.close);
   assert.equal(state.document.querySelector('.hbo-badge'), null);
   assert.match(state.document.getElementById('hbo-counter').textContent, /0 \/ 1 game/);
+});
+
+test('Next.js bundle cards are badged on the thumbnail with the counter above the grid', async t => {
+  const state = await content({ html: nextBundle(nextCard('Game') + nextCard('Another Game') + nextCard('Game', 'books')) });
+  t.after(state.close);
+  const badges = state.document.querySelectorAll('.hbo-badge');
+  assert.equal(badges.length, 1);
+  assert.equal(badges[0].parentElement.dataset.testid, 'product-thumbnail');
+  assert.equal(badges[0].parentElement.querySelector('img').alt, 'Game');
+  const counter = state.document.getElementById('hbo-counter');
+  assert.match(counter.textContent, /1 \/ 2 games/);
+  assert.equal(counter, state.document.querySelector('[data-testid="bundle-item-section-games"]').firstElementChild);
+});
+
+test('Next.js bundle layout ignores legacy heading guesses and follows card changes', async t => {
+  const state = await content({ html: nextBundle('') });
+  t.after(state.close);
+  assert.equal(state.document.querySelector('#hbo-counter'), null);
+  state.document.querySelector('ul').innerHTML = nextCard('Other Game') + nextCard('Other Game');
+  await state.settle();
+  assert.match(state.document.getElementById('hbo-counter').textContent, /0 \/ 1 game/);
+  state.document.querySelector('ul').innerHTML = nextCard('Game');
+  await state.settle();
+  assert.equal(state.document.querySelectorAll('.hbo-badge').length, 1);
+  assert.equal(state.document.querySelectorAll('#hbo-counter').length, 1);
+  assert.match(state.document.getElementById('hbo-counter').textContent, /all 1 game/);
+});
+
+test('Next.js bundle cards fall back to the title text when the image has no alt', async t => {
+  const state = await content({ html: nextBundle(nextCard('Game').replace(' alt="Game"', '')) });
+  t.after(state.close);
+  assert.equal(state.document.querySelectorAll('.hbo-badge').length, 1);
 });
 
 for (const path of ['/games', '/books/example', '/software/example', '/store']) {
@@ -156,6 +188,56 @@ test('public Choice keeps its centered counter and counts Steam games only', asy
   state.document.querySelector('p').textContent += ' Updated.';
   await state.settle();
   assert.equal(state.timers.size, 0);
+});
+
+function nextChoiceHtml() {
+  const product = (id, title, deliveryMethods) => ({ id, productType: 'humble-choice',
+    thumbnail: `https://hb-prd.imgix.net/product-media/${id}.jpg`, title, deliveryMethods });
+  const stream = `18:["$","$L71",null,${JSON.stringify({ subscriptionProducts: [product('game', 'Game', ['steam']),
+    product('hidden', 'Hidden "Quoted" Game', ['steam']), product('other', 'Non Steam', ['blizzard']),
+    product('play', 'Game Playtest', ['steam']), product('ign', 'IGN Plus Subscription', ['external_key'])] })}]`;
+  const img = id => `<img alt="" src="/_next/image?url=${encodeURIComponent(`https://hb-prd.imgix.net/product-media/${id}.jpg`)}&w=640&q=75">`;
+  return `<section><h2>This Month's Games</h2></section>
+    <section aria-label="Media carousel"><figure id="main">${img('game')}</figure>
+      <button id="thumb">${img('game')}</button><button id="other">${img('other')}</button><button>Next slide</button></section>
+    <script>self.__next_f.push(${JSON.stringify([1, stream])})</script>`;
+}
+
+test('Next.js Choice counts games from page data and badges rendered thumbnails', async t => {
+  const state = await content({ html: nextChoiceHtml(), url: 'https://www.humblebundle.com/membership', badges: true });
+  t.after(state.close);
+  assert.match(state.document.getElementById('hbo-counter').textContent, /1 \/ 3 games in this month's Choice/);
+  assert.ok(state.document.querySelector('#main > .hbo-badge'));
+  assert.ok(state.document.querySelector('#thumb > .hbo-badge'));
+  assert.equal(state.document.querySelectorAll('.hbo-badge').length, 2);
+  state.document.querySelector('#thumb img').setAttribute('src', '/_next/image?url=' +
+    encodeURIComponent('https://hb-prd.imgix.net/product-media/hidden.jpg'));
+  state.document.querySelector('#other').append(state.document.createElement('span'));
+  await state.settle();
+  assert.equal(state.document.querySelector('#thumb > .hbo-badge'), null);
+  assert.match(state.document.getElementById('hbo-counter').textContent, /1 \/ 3 games/);
+});
+
+test('Next.js member Choice cards are badged and counted above the grid', async t => {
+  const memberCard = title => `<button type="button" aria-label="View details for ${title}"><div data-testid="product-card">
+    <div data-testid="product-thumbnail" style="position:relative"><img alt=""></div><div>${title}</div></div></button>`;
+  const state = await content({ html: `<div data-testid="member-home-extras-group"><h1>November 2026 Humble Choice</h1>
+    <div id="grid">${memberCard('Game') + memberCard('Non Steam') + memberCard('IGN Plus Subscription')}</div>
+    <div id="extras">${memberCard('Game') + memberCard('Extra Game')}</div></div>`,
+  url: 'https://www.humblebundle.com/membership/home', badges: true });
+  t.after(state.close);
+  assert.match(state.document.getElementById('hbo-counter').textContent, /1 \/ 2 games in this month's Choice/);
+  assert.equal(state.document.querySelectorAll('.hbo-badge').length, 1);
+  assert.equal(state.document.querySelector('.hbo-badge').parentElement.dataset.testid, 'product-thumbnail');
+  assert.equal(state.document.getElementById('grid').previousElementSibling.id, 'hbo-counter-row');
+
+  // Opening the details dialog adds the carousel; grid badges and the count must stay.
+  state.document.body.insertAdjacentHTML('beforeend', nextChoiceHtml());
+  await state.settle();
+  assert.match(state.document.getElementById('hbo-counter').textContent, /1 \/ 2 games/);
+  assert.ok(state.document.querySelector('#grid .hbo-badge'));
+  assert.ok(state.document.querySelector('#main > .hbo-badge'));
+  assert.equal(state.document.querySelectorAll('.hbo-badge').length, 3);
 });
 
 test('Choice carousel clones keep their badges and do not inflate the count', async t => {

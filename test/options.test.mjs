@@ -37,8 +37,8 @@ test('successful fetch clears and hides the key and displays the returned count'
   assert.equal(state.key.type, 'password');
   assert.equal(state.button.disabled, false);
   assert.equal(state.status.className, 'ok');
-  assert.match(state.status.textContent, /1 games loaded/);
-  assert.match(state.document.getElementById('cache-info').textContent, /Cache: 1 games/);
+  assert.match(state.status.textContent, /Got 1 game from Steam/);
+  assert.match(state.document.getElementById('cache-info').textContent, /^1 game · fetched/);
   assert.deepEqual(state.writes, []);
 });
 
