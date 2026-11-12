@@ -1,10 +1,10 @@
-# Humble Bundle Owned Overlay
+# Steam Library Checker for Humble Bundle
 
 A browser extension that shows which games in a Humble Bundle or Humble Choice month you already own on Steam. Owned games get a green **Owned** badge, and a counter near the top shows "X / Y games owned".
 
 Install it from the [Chrome Web Store](https://chromewebstore.google.com/detail/humble-bundle-owned-overl/bkbliccgapgfedaploklillhkmlailik). Problems or requests: [open an issue](https://github.com/Armadyl00/humble-owned-overlay/issues).
 
-> **Status, November 2026:** Humble has redesigned its site. The store version (v3.4.7) only works on the old layout. v3.5.0 on the `canary` branch supports the new one, but I'm holding off on releasing it in case Humble rolls the redesign back.
+> **Status, November 2026:** Current GitHub releases support Humble's redesigned site. The pre-redesign version is preserved on [`backup/main-before-redesign-2026-11-12`](https://github.com/Armadyl00/humble-owned-overlay/tree/backup/main-before-redesign-2026-11-12), and the [v3.4.7 downloads](https://github.com/Armadyl00/humble-owned-overlay/releases/tag/v3.4.7) remain available as a fallback.
 
 > **Disclaimer:** This extension was built collaboratively with [Claude](https://claude.com) for personal use and learning. I am not a software engineer. The code is published as-is, so review it yourself before installing.
 
