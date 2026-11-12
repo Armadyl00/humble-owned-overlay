@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.5.1
+
+- Update the Chrome Web Store summary to mention bundle and Humble Choice games in your Steam library.
+
 ## v3.5.0
 
 - Support Humble's redesigned (Next.js) game bundle pages: find game cards by their `data-testid` markers, badge the card thumbnail, and place the counter above the games grid.
